@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next_broken*/
 /out/
 
 # production

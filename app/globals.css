@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────
+   FinancePilot — Design System v2
+   Psicologia das cores: navy profundo transmite
+   autoridade e confiança; índigo remete a
+   tecnologia e precisão; verde-esmeralda indica
+   crescimento saudável; rosa/vermelho, risco.
+───────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Fundos */
+  --bg-primary:    #070C18;
+  --bg-secondary:  #0D1526;
+  --bg-tertiary:   #142038;
+  --bg-elevated:   #1A2B4A;
+  --bg-hover:      #1E3255;
+
+  /* Bordas */
+  --border:        #1E3252;
+  --border-strong: #2A4572;
+  --border-focus:  #4F46E5;
+
+  /* Texto */
+  --text-primary:   #EEF2FF;
+  --text-secondary: #8FA3C0;
+  --text-muted:     #3D5478;
+
+  /* Índigo — ação principal (tecnologia + confiança) */
+  --accent:        #4F46E5;
+  --accent-hover:  #4338CA;
+  --accent-light:  #6366F1;
+  --accent-soft:   rgba(79, 70, 229, 0.13);
+  --accent-medium: rgba(79, 70, 229, 0.22);
+
+  /* Esmeralda — crescimento / positivo */
+  --success:       #10B981;
+  --success-hover: #059669;
+  --success-soft:  rgba(16, 185, 129, 0.12);
+
+  /* Rosa — risco / negativo */
+  --danger:        #F43F5E;
+  --danger-hover:  #E11D48;
+  --danger-soft:   rgba(244, 63, 94, 0.12);
+
+  /* Âmbar — atenção */
+  --warning:       #F59E0B;
+  --warning-hover: #D97706;
+  --warning-soft:  rgba(245, 158, 11, 0.12);
+
+  /* Violeta — diagnóstico / BI */
+  --purple:        #8B5CF6;
+  --purple-soft:   rgba(139, 92, 246, 0.12);
+
+  /* Ciano — info */
+  --info:          #06B6D4;
+  --info-soft:     rgba(6, 182, 212, 0.12);
+
+  /* Misc */
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow:    0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html.light {
+  --bg-primary:    #F1F5F9;
+  --bg-secondary:  #FFFFFF;
+  --bg-tertiary:   #F8FAFC;
+  --bg-elevated:   #FFFFFF;
+  --bg-hover:      #EFF2F7;
+
+  --border:        #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  --accent-soft:   rgba(79, 70, 229, 0.08);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow:    0 4px 16px rgba(0,0,0,0.12);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:  var(--bg-primary);
+  color:       var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size:   14px;
+  line-height: 1.5;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Inputs base ── */
+input, select, textarea, button {
+  font-family: inherit;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
 }
