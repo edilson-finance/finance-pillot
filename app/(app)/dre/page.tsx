@@ -118,14 +118,15 @@ const SECOES = [
   { key:"lucro",        label:"Lucro Líquido",          ids:["lucro_liq"] },
 ]
 
-type DreRow = { id:string; label:string; tipo:string; valor:number; pct:number; filhos?: DreRow[] }
+type DreRow = { id:string; label:string; tipo?:string; valor:number; pct:number; filhos?: DreRow[] }
 
 function DreRowComp({ row, depth=0, visible }: { row:DreRow; depth?:number; visible:Set<string> }) {
   const [open, setOpen] = useState(depth===0)
   if (!visible.has(row.id)) return null
 
   const hasChildren = (row.filhos?.length ?? 0) > 0
-  const isBold = ["total","resultado","destaque","lucro","positivo"].includes(row.tipo)
+  const tipo = row.tipo ?? ""
+  const isBold = ["total","resultado","destaque","lucro","positivo"].includes(tipo)
 
   const bgMap: Record<string,string> = {
     total:    "var(--bg-tertiary)",
@@ -148,17 +149,17 @@ function DreRowComp({ row, depth=0, visible }: { row:DreRow; depth?:number; visi
     <>
       <tr
         onClick={()=>hasChildren&&setOpen(o=>!o)}
-        style={{ background:bgMap[row.tipo]||"transparent", borderBottom:"1px solid var(--border)", cursor:hasChildren?"pointer":"default" }}
-        onMouseEnter={e=>{ if(!["total","resultado","destaque","lucro"].includes(row.tipo)) (e.currentTarget as HTMLElement).style.background="var(--bg-tertiary)" }}
-        onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.background=bgMap[row.tipo]||"transparent" }}>
+        style={{ background:bgMap[tipo]||"transparent", borderBottom:"1px solid var(--border)", cursor:hasChildren?"pointer":"default" }}
+        onMouseEnter={e=>{ if(!["total","resultado","destaque","lucro"].includes(tipo)) (e.currentTarget as HTMLElement).style.background="var(--bg-tertiary)" }}
+        onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.background=bgMap[tipo]||"transparent" }}>
         <td style={{ padding:"11px 16px", paddingLeft:`${16+depth*22}px`, display:"flex", alignItems:"center", gap:"6px" }}>
           {hasChildren && (
             <ChevronRight size={13} style={{ color:"var(--text-muted)", transform:open?"rotate(90deg)":"none", transition:"transform 0.15s", flexShrink:0 }}/>
           )}
           {!hasChildren && depth>0 && <div style={{ width:"13px" }}/>}
-          <span style={{ fontSize:depth===0?13:12.5, fontWeight:isBold?700:400, color:colorMap[row.tipo] }}>{row.label}</span>
+          <span style={{ fontSize:depth===0?13:12.5, fontWeight:isBold?700:400, color:colorMap[tipo] }}>{row.label}</span>
         </td>
-        <td style={{ padding:"11px 14px", textAlign:"right", fontSize:isBold?13.5:12.5, fontWeight:isBold?800:500, color:colorMap[row.tipo], whiteSpace:"nowrap" }}>
+        <td style={{ padding:"11px 14px", textAlign:"right", fontSize:isBold?13.5:12.5, fontWeight:isBold?800:500, color:colorMap[tipo], whiteSpace:"nowrap" }}>
           {row.valor!==0 ? R(row.valor) : "—"}
         </td>
         <td style={{ padding:"11px 14px", textAlign:"right", fontSize:"12px", color:row.pct<0?"var(--danger)":row.pct>20?"var(--success)":"var(--text-secondary)" }}>

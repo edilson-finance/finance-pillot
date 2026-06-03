@@ -3,9 +3,9 @@
 import Link from "next/link"
 import { useState, useTransition } from "react"
 import { Zap, Eye, EyeOff } from "lucide-react"
-import { login } from "./actions"
+import { signup } from "./actions"
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -15,7 +15,7 @@ export default function LoginPage() {
     setError(null)
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      const result = await login(formData)
+      const result = await signup(formData)
       if (result?.error) setError(result.error)
     })
   }
@@ -62,7 +62,7 @@ export default function LoginPage() {
             FinancePilot
           </h1>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Acesse sua conta
+            Crie sua conta gratuita
           </p>
         </div>
 
@@ -108,6 +108,7 @@ export default function LoginPage() {
                   name="password"
                   placeholder="••••••••"
                   required
+                  minLength={6}
                   style={{
                     width: "100%",
                     padding: "9px 38px 9px 12px",
@@ -137,11 +138,6 @@ export default function LoginPage() {
                   }}>
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
-              </div>
-              <div style={{ textAlign: "right", marginTop: "6px" }}>
-                <Link href="#" style={{ fontSize: "11px", color: "var(--accent)", textDecoration: "none" }}>
-                  Esqueceu a senha?
-                </Link>
               </div>
             </div>
 
@@ -176,7 +172,7 @@ export default function LoginPage() {
                 opacity: isPending ? 0.7 : 1,
                 fontFamily: "inherit",
               }}>
-              {isPending ? "Entrando..." : "Entrar"}
+              {isPending ? "Criando conta..." : "Criar conta"}
             </button>
           </form>
 
@@ -188,9 +184,9 @@ export default function LoginPage() {
             fontSize: "12px",
             color: "var(--text-secondary)",
           }}>
-            Não tem conta?{" "}
-            <Link href="/signup" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-              Criar conta grátis
+            Já tem conta?{" "}
+            <Link href="/login" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
+              Entrar
             </Link>
           </div>
         </div>

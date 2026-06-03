@@ -1,21 +1,25 @@
 "use client"
 
-import Link from "next/link"
 import { useState, useTransition } from "react"
-import { Zap, Eye, EyeOff } from "lucide-react"
-import { login } from "./actions"
+import { Zap } from "lucide-react"
+import { COMPANY_PROFILES, type CompanyType } from "@/lib/company-context"
+import { completeOnboarding } from "./actions"
 
-export default function LoginPage() {
-  const [showPass, setShowPass] = useState(false)
+export default function OnboardingPage() {
+  const [selectedType, setSelectedType] = useState<CompanyType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    if (!selectedType) {
+      setError("Selecione o tipo de empresa.")
+      return
+    }
     const formData = new FormData(e.currentTarget)
     startTransition(async () => {
-      const result = await login(formData)
+      const result = await completeOnboarding(formData)
       if (result?.error) setError(result.error)
     })
   }
@@ -41,7 +45,7 @@ export default function LoginPage() {
 
       <div style={{
         width: "100%",
-        maxWidth: "400px",
+        maxWidth: "560px",
         position: "relative",
       }}>
         {/* Logo */}
@@ -59,10 +63,10 @@ export default function LoginPage() {
             <Zap size={22} color="#fff" strokeWidth={2.5} />
           </div>
           <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
-            FinancePilot
+            Configure sua empresa
           </h1>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Acesse sua conta
+            Conte um pouco sobre você e sua empresa para personalizar a experiência
           </p>
         </div>
 
@@ -74,14 +78,17 @@ export default function LoginPage() {
           padding: "28px",
         }}>
           <form onSubmit={handleSubmit}>
+            {/* Hidden company_type input */}
+            <input type="hidden" name="company_type" value={selectedType ?? ""} />
+
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
-                E-mail
+                Seu nome
               </label>
               <input
-                type="email"
-                name="email"
-                placeholder="seu@email.com"
+                type="text"
+                name="user_name"
+                placeholder="Como devemos te chamar?"
                 required
                 style={{
                   width: "100%",
@@ -100,48 +107,68 @@ export default function LoginPage() {
 
             <div style={{ marginBottom: "20px" }}>
               <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
-                Senha
+                Nome da empresa
               </label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPass ? "text" : "password"}
-                  name="password"
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "9px 38px 9px 12px",
-                    background: "var(--bg-tertiary)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    color: "var(--text-primary)",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  style={{
-                    position: "absolute",
-                    right: "10px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--text-muted)",
-                    padding: "2px",
-                  }}>
-                  {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <div style={{ textAlign: "right", marginTop: "6px" }}>
-                <Link href="#" style={{ fontSize: "11px", color: "var(--accent)", textDecoration: "none" }}>
-                  Esqueceu a senha?
-                </Link>
+              <input
+                type="text"
+                name="company_name"
+                placeholder="Nome da sua empresa"
+                required
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "10px" }}>
+                Tipo de empresa
+              </label>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "8px",
+              }}>
+                {(Object.values(COMPANY_PROFILES) as typeof COMPANY_PROFILES[keyof typeof COMPANY_PROFILES][]).map((profile) => {
+                  const isSelected = selectedType === profile.key
+                  return (
+                    <button
+                      key={profile.key}
+                      type="button"
+                      onClick={() => setSelectedType(profile.key)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "10px 12px",
+                        background: isSelected ? "var(--accent-soft)" : "var(--bg-tertiary)",
+                        border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}>
+                      <span style={{ fontSize: "20px", lineHeight: 1 }}>{profile.icon}</span>
+                      <span style={{
+                        fontSize: "12px",
+                        fontWeight: isSelected ? 600 : 400,
+                        color: isSelected ? "var(--accent-light)" : "var(--text-primary)",
+                        fontFamily: "inherit",
+                      }}>
+                        {profile.shortLabel}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -176,23 +203,9 @@ export default function LoginPage() {
                 opacity: isPending ? 0.7 : 1,
                 fontFamily: "inherit",
               }}>
-              {isPending ? "Entrando..." : "Entrar"}
+              {isPending ? "Configurando..." : "Começar a usar"}
             </button>
           </form>
-
-          <div style={{
-            textAlign: "center",
-            marginTop: "20px",
-            paddingTop: "20px",
-            borderTop: "1px solid var(--border)",
-            fontSize: "12px",
-            color: "var(--text-secondary)",
-          }}>
-            Não tem conta?{" "}
-            <Link href="/signup" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-              Criar conta grátis
-            </Link>
-          </div>
         </div>
       </div>
     </div>
