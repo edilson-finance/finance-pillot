@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus, Search, Edit2, RefreshCw, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Account } from "@/lib/db/accounts"
+import { BR_BANKS, brBankLabel } from "@/lib/br-banks"
 import { createAccount, updateAccount, deleteAccount } from "./actions"
 
 const R = (v:number) => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:0}).format(v)
@@ -128,7 +129,11 @@ export default function AccountsClient({ accounts }: { accounts: Account[] }) {
                 {Object.entries(kindLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}
               </select>
             </div>
-            <div><Label>Banco / Instituição</Label><input name="bank" id="bank" type="text" defaultValue={editing?.bank ?? ""} placeholder="Bradesco, Itaú, Nubank..." style={inp}/></div>
+            <div><Label>Banco / Instituição</Label><input name="bank" id="bank" type="text" list="brBanks" autoComplete="off" defaultValue={editing?.bank ?? ""} placeholder="Digite o nome ou código (ex: 237, Bradesco)..." style={inp}/>
+              <datalist id="brBanks">
+                {BR_BANKS.map(b => <option key={`${b.code}-${b.name}`} value={brBankLabel(b)} />)}
+              </datalist>
+            </div>
             <div><Label>Saldo inicial (R$)</Label><input name="opening_balance" id="opening_balance" type="number" step="0.01" defaultValue={editing?.opening_balance ?? 0} placeholder="0,00" style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
