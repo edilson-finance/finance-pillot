@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail } from "lucide-react"
+import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail, User, ChevronDown, ChevronUp } from "lucide-react"
 import { MEMBER_MODULES } from "@/lib/modules"
 import { createInvite, revokeInvite, updateUserRole, setMemberPermissions, removeUser } from "./actions"
 
@@ -54,6 +54,7 @@ export default function UsersClient({
   invites: PendingInvite[]
 }) {
   const [tab, setTab] = useState<"users" | "invites">("users")
+  const [showLegend, setShowLegend] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [editing, setEditing] = useState<CompanyUser | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -119,6 +120,8 @@ export default function UsersClient({
           <Plus size={13} /> Convidar usuário
         </button>
       </div>
+
+      <RoleLegend open={showLegend} onToggle={() => setShowLegend(v => !v)} />
 
       {error && (
         <div style={{ marginBottom: "14px", padding: "10px 14px", background: "var(--danger-soft)", border: "1px solid rgba(244,63,94,0.3)", borderRadius: "8px", fontSize: "12px", color: "var(--danger)" }}>{error}</div>
@@ -313,6 +316,70 @@ export default function UsersClient({
           }}
           saving={isPending}
         />
+      )}
+    </div>
+  )
+}
+
+function RoleLegend({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const cards = [
+    {
+      icon: <Shield size={14} style={{ color: "var(--accent)" }} />,
+      label: "Administrador",
+      color: "var(--accent)",
+      bg: "var(--accent-soft)",
+      desc: "Controle total da empresa.",
+      can: [
+        "Acessa todos os módulos do sistema, sem restrição",
+        "Convida, troca o perfil e remove usuários",
+        "Define quais módulos cada membro pode acessar",
+        "Entra nas áreas restritas: Usuários e Configurações",
+        "Cria, edita e exclui lançamentos, cadastros e categorias",
+      ],
+    },
+    {
+      icon: <User size={14} style={{ color: "var(--success)" }} />,
+      label: "Membro",
+      color: "var(--success)",
+      bg: "var(--success-soft)",
+      desc: "Acesso limitado ao que o administrador liberar.",
+      can: [
+        "Vê apenas os módulos marcados como liberados no convite",
+        "Dentro de um módulo liberado, usa as mesmas ações do admin",
+        "Não enxerga as áreas de Usuários e Configurações",
+        "Não gerencia outros usuários nem permissões",
+        "Tem as permissões ajustadas a qualquer momento em “Permissões”",
+      ],
+    },
+  ]
+  return (
+    <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", marginBottom: "16px", overflow: "hidden" }}>
+      <button onClick={onToggle} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", fontWeight: 700, color: "var(--text-primary)" }}>
+          <Shield size={13} style={{ color: "var(--accent)" }} /> O que cada perfil pode fazer
+        </span>
+        {open ? <ChevronUp size={15} style={{ color: "var(--text-muted)" }} /> : <ChevronDown size={15} style={{ color: "var(--text-muted)" }} />}
+      </button>
+      {open && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "12px", padding: "0 16px 16px" }}>
+          {cards.map(c => (
+            <div key={c.label} style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "4px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "26px", height: "26px", borderRadius: "7px", background: c.bg }}>{c.icon}</span>
+                <span style={{ fontSize: "13px", fontWeight: 800, color: c.color }}>{c.label}</span>
+              </div>
+              <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "10px" }}>{c.desc}</p>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "7px" }}>
+                {c.can.map((t, idx) => (
+                  <li key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "7px", fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                    <Check size={12} style={{ color: c.color, flexShrink: 0, marginTop: "2px" }} />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
