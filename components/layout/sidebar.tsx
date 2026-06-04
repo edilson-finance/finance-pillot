@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Wallet,
   BarChart3, TrendingUp, FileText, RefreshCw, Activity,
   BrainCircuit, Bell, Settings, Users, Package, Zap, LogOut,
-  AlertTriangle,
+  AlertTriangle, ShieldCheck,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useSession, canAccess } from "@/lib/session-context"
@@ -117,6 +117,16 @@ export function Sidebar() {
       items: sec.items.filter(item => canAccess(session, item.href.replace(/^\//, ""))),
     }))
     .filter(sec => sec.items.length > 0)
+
+  if (session.role === "super_admin") {
+    visibleSections.push({
+      label: "Super Admin",
+      items: [
+        { href: "/admin",       label: "Central Admin", icon: ShieldCheck },
+        { href: "/admin/users", label: "Usuários",      icon: Users },
+      ],
+    })
+  }
 
   const initials = session.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
 
