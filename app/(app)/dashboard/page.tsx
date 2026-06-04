@@ -163,7 +163,7 @@ export default function DashboardPage() {
         <KpiCard label="A Receber"     value={R(kpis.aReceber)}     sub={`${R(kpis.aReceberVencido)} em atraso`} trend="down" color="var(--warning)" href="/receivables" />
         <KpiCard label="A Pagar"       value={R(kpis.aPagar)}       sub={`${R(kpis.aPagarVencido)} vencido`}    trend="down" color="var(--danger)"  href="/payables" />
         <KpiCard label="Inadimplência" value={`${kpis.inadimplencia}%`} sub="Limite saudável: 5%"               trend="down" color="var(--danger)"  href="/delinquent" />
-        <KpiCard label="EBITDA"        value={R(kpis.ebitda)}       sub={`${((kpis.ebitda/Math.max(kpis.faturamento,1))*100).toFixed(1)}% da receita`} trend="up" href="/bi" />
+        <KpiCard label="Despesa"       value={R(kpis.despesaTotal)} sub={`${((kpis.despesaTotal/Math.max(kpis.faturamento,1))*100).toFixed(1)}% da receita`} trend="down" color="var(--danger)" href="/dre" />
       </div>
 
       {/* Charts Row 1 */}
