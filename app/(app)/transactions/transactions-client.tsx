@@ -315,8 +315,17 @@ function SuccessModal({ open, title, subtitle, color, onNew, onClose }: {
 }
 
 // ── upload de anexos ─────────────────────────────────────────────────────────
+const MAX_FILE_MB = 4
 function Dropzone({ files, setFiles, accept }: { files: File[]; setFiles: (f: File[]) => void; accept: string }) {
   const ref = useRef<HTMLInputElement>(null)
+  const [warn, setWarn] = useState("")
+  const onPick = (picked: File[]) => {
+    const ok = picked.filter((f) => f.size <= MAX_FILE_MB * 1024 * 1024)
+    const big = picked.filter((f) => f.size > MAX_FILE_MB * 1024 * 1024)
+    setFiles(ok)
+    if (ref.current) ref.current.value = ""
+    setWarn(big.length ? `${big.map((f) => f.name).join(", ")} — acima de ${MAX_FILE_MB}MB e ${big.length > 1 ? "foram ignorados" : "foi ignorado"}.` : "")
+  }
   return (
     <div>
       <div onClick={() => ref.current?.click()} style={{
@@ -326,10 +335,11 @@ function Dropzone({ files, setFiles, accept }: { files: File[]; setFiles: (f: Fi
         <div style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
           Arraste ou <span style={{ color: "var(--accent)", fontWeight: 600 }}>clique para selecionar</span>
         </div>
-        <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "3px" }}>{accept} · Máx 10MB</div>
+        <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "3px" }}>{accept} · Máx {MAX_FILE_MB}MB por arquivo</div>
       </div>
       <input ref={ref} type="file" name="attachments" multiple hidden
-        onChange={(e) => setFiles([...(e.target.files ? Array.from(e.target.files) : [])])} />
+        onChange={(e) => onPick(e.target.files ? Array.from(e.target.files) : [])} />
+      {warn && <div style={{ marginTop: "8px", fontSize: "11.5px", color: "var(--danger)", fontWeight: 600 }}>{warn}</div>}
       {files.length > 0 && (
         <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
           {files.map((f, i) => (
@@ -422,10 +432,15 @@ function useSubmit(action: (fd: FormData) => Promise<{ error: string | null }>, 
     // dispara a validação nativa + mensagens de setCustomValidity (e-mail, telefone, CPF/CNPJ, valor)
     if (!form.reportValidity()) return
     setSaving(true); setError(null); setOk(false)
-    const res = await action(new FormData(form))
-    setSaving(false)
-    if (res.error) { setError(res.error) }
-    else { setOk(true); onSaved() }
+    try {
+      const res = await action(new FormData(form))
+      if (res.error) setError(res.error)
+      else { setOk(true); onSaved() }
+    } catch {
+      setError("Não foi possível salvar. Verifique o tamanho dos anexos (máx 4MB cada) e tente novamente.")
+    } finally {
+      setSaving(false)
+    }
   }
   return { saving, error, ok, setOk, keepNew, onSubmit }
 }
