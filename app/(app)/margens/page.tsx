@@ -5,18 +5,11 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts"
 import { TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react"
-import { revenueExpenseData, dreData } from "@/lib/mock-data"
+import { useRevenueSeries, useDre } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
-
-const margemData = revenueExpenseData.map(d => ({
-  mes: d.mes,
-  bruta: parseFloat(((d.receita - d.receita * 0.07 - d.receita * 0.57) / d.receita * 100).toFixed(1)),
-  contribuicao: parseFloat(((d.receita - d.despesa * 0.65) / d.receita * 100).toFixed(1)),
-  operacional: parseFloat(((d.receita - d.despesa * 0.82) / d.receita * 100).toFixed(1)),
-  liquida: parseFloat(((d.receita - d.despesa) / d.receita * 100 * 0.41).toFixed(1)),
-}))
 
 const margemAtual = [
   { label: "Margem Bruta", valor: 43.3, referencia: 45, status: "atencao", descricao: "Receita após custos diretos de produção" },
@@ -40,6 +33,17 @@ function StatusDot({ status }: { status: string }) {
 }
 
 export default function MargensPage() {
+  const { range } = useDateRange()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+
+  const margemData = revenueExpenseData.map(d => ({
+    mes: d.mes,
+    bruta: parseFloat(((d.receita - d.receita * 0.07 - d.receita * 0.57) / d.receita * 100).toFixed(1)),
+    contribuicao: parseFloat(((d.receita - d.despesa * 0.65) / d.receita * 100).toFixed(1)),
+    operacional: parseFloat(((d.receita - d.despesa * 0.82) / d.receita * 100).toFixed(1)),
+    liquida: parseFloat(((d.receita - d.despesa) / d.receita * 100 * 0.41).toFixed(1)),
+  }))
+
   return (
     <div style={{ padding: "20px", maxWidth: "1400px" }}>
 

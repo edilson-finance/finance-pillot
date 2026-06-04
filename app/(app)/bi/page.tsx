@@ -11,7 +11,7 @@ import { useTopClients, useTopExpenses } from "@/lib/analytics-client"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { useRevenueSeries, useKpis } from "@/lib/analytics-client"
-import { daysBetween } from "@/lib/filtered-mock"
+import { daysBetween } from "@/lib/date-utils"
 import { gastoPorCategoria, receitaPorCategoria, GRUPOS_DRE } from "@/lib/accounts-plan"
 
 const R = formatCurrency

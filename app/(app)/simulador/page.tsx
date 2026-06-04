@@ -8,7 +8,8 @@ import {
   Users, Package, TrendingDown, TrendingUp, DollarSign, Percent,
   Calculator, ChevronRight, AlertTriangle, CheckCircle, Minus,
 } from "lucide-react"
-import { kpiData } from "@/lib/mock-data"
+import { useKpis, type Kpis } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -95,12 +96,12 @@ const simulacoes: Simulacao[] = [
   },
 ]
 
-function calcularImpacto(tipo: string, valores: Record<string, number>) {
-  const r = kpiData.faturamento
-  const despesa = kpiData.aPagar / 1 // mensal
-  const caixa = kpiData.saldoAtual
-  const lucro = kpiData.lucroLiquido
-  const margem = kpiData.lucroMargin
+function calcularImpacto(tipo: string, valores: Record<string, number>, kpis: Kpis) {
+  const r = kpis.faturamento
+  const despesa = kpis.aPagar / 1 // mensal
+  const caixa = kpis.saldoAtual
+  const lucro = kpis.lucroLiquido
+  const margem = kpis.lucroMargin
 
   switch (tipo) {
     case "contratacao": {
@@ -182,16 +183,18 @@ function calcularImpacto(tipo: string, valores: Record<string, number>) {
 }
 
 export default function SimuladorPage() {
+  const { range } = useDateRange()
+  const { kpis } = useKpis(range)
   const [simAtiva, setSimAtiva] = useState(simulacoes[0])
   const [valores, setValores] = useState<Record<string, number>>({})
 
   const getValor = (campo: typeof simAtiva.campos[0]) => valores[campo.key] ?? campo.default
 
-  const impacto = calcularImpacto(simAtiva.tipo, Object.fromEntries(simAtiva.campos.map(c => [c.key, getValor(c)])))
+  const impacto = calcularImpacto(simAtiva.tipo, Object.fromEntries(simAtiva.campos.map(c => [c.key, getValor(c)])), kpis)
 
   const comparativoData = [
-    { label: "Atual", caixa: kpiData.saldoAtual, lucro: kpiData.lucroLiquido, margem: kpiData.lucroMargin },
-    { label: "Simulado", caixa: kpiData.saldoAtual + impacto.impactoCaixa, lucro: kpiData.lucroLiquido + impacto.impactoLucro, margem: parseFloat((kpiData.lucroMargin + impacto.impactoMargem).toFixed(1)) },
+    { label: "Atual", caixa: kpis.saldoAtual, lucro: kpis.lucroLiquido, margem: kpis.lucroMargin },
+    { label: "Simulado", caixa: kpis.saldoAtual + impacto.impactoCaixa, lucro: kpis.lucroLiquido + impacto.impactoLucro, margem: parseFloat((kpis.lucroMargin + impacto.impactoMargem).toFixed(1)) },
   ]
 
   const riscoCor = impacto.risco === "critico" || impacto.risco === "alto" ? "var(--danger)" : impacto.risco === "medio" ? "var(--warning)" : impacto.risco === "positivo" ? "var(--success)" : "var(--success)"

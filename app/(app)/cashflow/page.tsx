@@ -3,13 +3,44 @@
 import { useState, useMemo } from "react"
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Line, ReferenceLine } from "recharts"
 import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, AlertTriangle, Plus, Download, Eye, EyeOff, RefreshCw, CalendarDays } from "lucide-react"
-import { cashflowTransactions, cashflowProjection, revenueExpenseData, payables, receivables } from "@/lib/mock-data"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
-import { useCashflow } from "@/lib/analytics-client"
+import { useCashflow, useReceivables, usePayables, useRevenueSeries, type OpenItem } from "@/lib/analytics-client"
 import Link from "next/link"
 
 const R = formatCurrency
+
+type CashRow = { data: string; descricao: string; categoria: string; conta: string; entrada: number | null; saida: number | null; saldo: number }
+
+/** Movimentos futuros em aberto, unificados (entrada/saída) */
+type FlowItem = { vencimento: string; valor: number; tipo: "in" | "out"; nome: string; conta: string; status: string }
+
+function toFlowItems(receivables: OpenItem[], payables: OpenItem[]): FlowItem[] {
+  return [
+    ...receivables.map((r) => ({ vencimento: r.vencimento, valor: r.valor, tipo: "in" as const, nome: r.nome, conta: r.conta, status: r.status === "em_atraso" ? "Em atraso" : "Previsto" })),
+    ...payables.map((p) => ({ vencimento: p.vencimento, valor: p.valor, tipo: "out" as const, nome: p.nome, conta: p.conta, status: p.status === "em_atraso" ? "Em atraso" : "Previsto" })),
+  ]
+}
+
+/** Projeção semanal (6 semanas a partir de hoje) derivada dos lançamentos em aberto */
+function buildWeeklyProjection(saldoInicial: number, flow: FlowItem[]) {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  const weeks: { semana: string; entradas: number; saidas: number; realizado: number | null; projetado: number }[] = []
+  let saldo = saldoInicial
+  for (let w = 0; w < 6; w++) {
+    const start = new Date(monday); start.setDate(monday.getDate() + w * 7)
+    const end = new Date(start); end.setDate(start.getDate() + 6)
+    const si = isoDate(start), ei = isoDate(end)
+    const inWeek = flow.filter((o) => o.vencimento >= si && o.vencimento <= ei)
+    const entradas = inWeek.filter((o) => o.tipo === "in").reduce((s, o) => s + o.valor, 0)
+    const saidas = inWeek.filter((o) => o.tipo === "out").reduce((s, o) => s + o.valor, 0)
+    saldo = saldo + entradas - saidas
+    const label = `${String(start.getDate()).padStart(2, "0")}/${String(start.getMonth() + 1).padStart(2, "0")}`
+    weeks.push({ semana: `Sem ${label}`, entradas, saidas, realizado: w === 0 ? saldoInicial : null, projetado: saldo })
+  }
+  return weeks
+}
 
 function Tip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
@@ -56,7 +87,7 @@ function compactMoney(value: number) {
   return `${sign}${R(abs)}`
 }
 
-function buildMoneyCalendar(monthDate: Date, openingBalance: number) {
+function buildMoneyCalendar(monthDate: Date, openingBalance: number, transactions: CashRow[], flow: FlowItem[]) {
   const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
   const gridStart = new Date(monthStart)
   gridStart.setDate(monthStart.getDate() - monthStart.getDay())
@@ -65,38 +96,25 @@ function buildMoneyCalendar(monthDate: Date, openingBalance: number) {
   const gridEnd = new Date(monthEnd)
   gridEnd.setDate(monthEnd.getDate() + (6 - monthEnd.getDay()))
 
-  const actualEvents = cashflowTransactions.map(t => ({
+  const actualEvents = transactions.map(t => ({
     date: t.data,
     title: t.descricao,
     account: t.conta,
-    type: t.entrada ? "in" : "out",
+    type: (t.entrada ? "in" : "out") as "in" | "out",
     amount: t.entrada ?? t.saida ?? 0,
     status: "Realizado",
   }))
 
-  const payableEvents = payables
-    .filter(p => p.status !== "pago")
-    .map(p => ({
-      date: p.vencimento,
-      title: p.fornecedor,
-      account: p.conta,
-      type: "out",
-      amount: p.valor,
-      status: p.status === "em_atraso" ? "Em atraso" : "Previsto",
-    }))
+  const futureEvents = flow.map(f => ({
+    date: f.vencimento,
+    title: f.nome,
+    account: f.conta,
+    type: f.tipo,
+    amount: f.valor,
+    status: f.status,
+  }))
 
-  const receivableEvents = receivables
-    .filter(r => r.status !== "recebido")
-    .map(r => ({
-      date: r.vencimento,
-      title: r.cliente,
-      account: r.conta,
-      type: "in",
-      amount: r.valor,
-      status: r.status === "em_atraso" ? "Em atraso" : "Previsto",
-    }))
-
-  const events = [...actualEvents, ...payableEvents, ...receivableEvents]
+  const events = [...actualEvents, ...futureEvents]
   const sortedEvents = [...events].sort((a, b) => a.date.localeCompare(b.date))
   let runningBalance = openingBalance
 
@@ -133,14 +151,7 @@ function buildMoneyCalendar(monthDate: Date, openingBalance: number) {
   return days
 }
 
-/* Group transactions by date */
-const grouped = cashflowTransactions.reduce((acc, t) => {
-  if (!acc[t.data]) acc[t.data] = []
-  acc[t.data].push(t)
-  return acc
-}, {} as Record<string, typeof cashflowTransactions>)
-
-function DayGroup({ date, rows }: { date: string; rows: typeof cashflowTransactions }) {
+function DayGroup({ date, rows }: { date: string; rows: CashRow[] }) {
   const [open, setOpen] = useState(true)
   const totalEntrada = rows.reduce((s,r) => s+(r.entrada||0), 0)
   const totalSaida = rows.reduce((s,r) => s+(r.saida||0), 0)
@@ -212,48 +223,22 @@ const PERIOD_OPTIONS = [
 ]
 
 // Gera dados diários de projeção com base nos lançamentos em aberto
-function buildDailyProjection(days: number, saldoInicial: number) {
+function buildDailyProjection(days: number, saldoInicial: number, flow: FlowItem[]) {
   const today = new Date(); today.setHours(0,0,0,0)
   const data: { data: string; label: string; saldo: number; entradas: number; saidas: number; realizado: boolean }[] = []
-
-  // Lançamentos futuros a receber
-  const futureReceivables = [
-    { data: "2026-05-10", valor: 98000, desc: "J. Silva — contrato" },
-    { data: "2026-05-15", valor: 42000, desc: "Grupo Horizonte" },
-    { data: "2026-05-20", valor: 14000, desc: "RJ Incorporadora" },
-    { data: "2026-05-31", valor: 150000, desc: "Construtora Beta" },
-    { data: "2026-06-10", valor: 98000, desc: "J. Silva — contrato jun" },
-    { data: "2026-06-15", valor: 42000, desc: "Grupo Horizonte jun" },
-    { data: "2026-06-30", valor: 150000, desc: "Construtora Beta jun" },
-    { data: "2026-07-10", valor: 98000, desc: "J. Silva — contrato jul" },
-  ]
-
-  // Lançamentos futuros a pagar
-  const futurePayables = [
-    { data: "2026-05-10", valor: 12400, desc: "Aço Nordeste" },
-    { data: "2026-05-12", valor: 4200,  desc: "Encargos sindicato" },
-    { data: "2026-05-15", valor: 6800,  desc: "Cimento Forte" },
-    { data: "2026-05-31", valor: 98400, desc: "Folha de pagamento" },
-    { data: "2026-06-05", valor: 8400,  desc: "Aluguel" },
-    { data: "2026-06-10", valor: 12400, desc: "Aço Nordeste jun" },
-    { data: "2026-06-15", valor: 6800,  desc: "Materiais jun" },
-    { data: "2026-06-24", valor: 103200,desc: "Folha junho" },
-    { data: "2026-07-05", valor: 8400,  desc: "Aluguel jul" },
-    { data: "2026-07-10", valor: 12400, desc: "Fornecedores jul" },
-    { data: "2026-07-31", valor: 98400, desc: "Folha julho" },
-  ]
 
   let saldo = saldoInicial
 
   for (let i = 0; i < days; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
-    const iso = d.toISOString().slice(0,10)
+    const iso = isoDate(d)
     const label = d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit" })
     const realizado = i < 3  // últimos 3 dias já realizados
 
-    const entradas = futureReceivables.filter(r => r.data === iso).reduce((s,r) => s+r.valor, 0)
-    const saidas   = futurePayables.filter(r => r.data === iso).reduce((s,r) => s+r.valor, 0)
+    const dayFlow = flow.filter(f => f.vencimento === iso)
+    const entradas = dayFlow.filter(f => f.tipo === "in").reduce((s,f) => s+f.valor, 0)
+    const saidas   = dayFlow.filter(f => f.tipo === "out").reduce((s,f) => s+f.valor, 0)
 
     saldo = saldo + entradas - saidas
 
@@ -263,14 +248,13 @@ function buildDailyProjection(days: number, saldoInicial: number) {
   return data
 }
 
-function ProjecaoDiaria() {
+function ProjecaoDiaria({ saldoAtual, flow }: { saldoAtual: number; flow: FlowItem[] }) {
   const [period,     setPeriod]     = useState(30)
   const [showRec,    setShowRec]    = useState(true)
   const [showPag,    setShowPag]    = useState(true)
   const [showSaldo,  setShowSaldo]  = useState(true)
-  const saldoAtual = 284750
 
-  const dados = useMemo(() => buildDailyProjection(period, saldoAtual), [period])
+  const dados = useMemo(() => buildDailyProjection(period, saldoAtual, flow), [period, saldoAtual, flow])
 
   const minSaldo = Math.min(...dados.map(d => d.saldo))
   const maxSaldo = Math.max(...dados.map(d => d.saldo))
@@ -490,12 +474,11 @@ function ProjecaoDiaria() {
 }
 
 /* ─── Calendário do Dinheiro ─── */
-function MoneyCalendar() {
+function MoneyCalendar({ saldoBase, transactions, flow }: { saldoBase: number; transactions: CashRow[]; flow: FlowItem[] }) {
   const [month, setMonth] = useState(new Date(2026, 4, 1))
   const [selectedDate, setSelectedDate] = useState(TODAY_ISO)
-  const saldoBase = 284750
   const safeBalance = 200000
-  const days = useMemo(() => buildMoneyCalendar(month, saldoBase), [month])
+  const days = useMemo(() => buildMoneyCalendar(month, saldoBase, transactions, flow), [month, saldoBase, transactions, flow])
   const selected = days.find(d => d.date === selectedDate) ?? days.find(d => d.inMonth && d.events.length > 0) ?? days.find(d => d.inMonth) ?? days[0]
   const monthDays = days.filter(d => d.inMonth)
   const totalIn = monthDays.reduce((s, d) => s + d.entradas, 0)
@@ -806,15 +789,23 @@ export default function CashflowPage() {
   const [tab, setTab] = useState(0)
   const { range } = useDateRange()
   const { rows: cfRows } = useCashflow(range)
+  const { rows: receivables } = useReceivables()
+  const { rows: payables } = usePayables()
+  const { series: revSeries } = useRevenueSeries(range)
 
   const realGrouped = useMemo(() => {
-    const g: Record<string, typeof cashflowTransactions> = {}
+    const g: Record<string, CashRow[]> = {}
     for (const t of cfRows) {
-      const row = { data: t.data, descricao: t.descricao, categoria: t.categoria, conta: "—", entrada: t.entrada || null, saida: t.saida || null, saldo: t.saldo }
-      ;(g[t.data] ||= [] as any).push(row as any)
+      const row: CashRow = { data: t.data, descricao: t.descricao, categoria: t.categoria, conta: "—", entrada: t.entrada || null, saida: t.saida || null, saldo: t.saldo }
+      ;(g[t.data] ||= []).push(row)
     }
     return g
   }, [cfRows])
+
+  const transactions = useMemo<CashRow[]>(
+    () => cfRows.map((t) => ({ data: t.data, descricao: t.descricao, categoria: t.categoria, conta: "—", entrada: t.entrada || null, saida: t.saida || null, saldo: t.saldo })),
+    [cfRows],
+  )
 
   const totalEntradas = cfRows.reduce((s,t)=>s+t.entrada,0)
   const totalSaidas   = cfRows.reduce((s,t)=>s+t.saida,0)
@@ -823,6 +814,11 @@ export default function CashflowPage() {
   const entradaCount  = cfRows.filter(t=>t.entrada>0).length
   const saidaCount    = cfRows.filter(t=>t.saida>0).length
   const menorSaldo    = cfRows.length ? Math.min(...cfRows.map(t=>t.saldo)) : 0
+
+  const flow = useMemo(() => toFlowItems(receivables, payables), [receivables, payables])
+  const aReceberTotal = receivables.reduce((s, r) => s + r.valor, 0)
+  const aPagarTotal   = payables.reduce((s, p) => s + p.valor, 0)
+  const weeklyProj = useMemo(() => buildWeeklyProjection(saldoFinal, flow), [saldoFinal, flow])
 
   return (
     <div style={{ padding:"22px" }}>
@@ -933,26 +929,29 @@ export default function CashflowPage() {
               </tr>
             </thead>
             <tbody>
-              {cashflowProjection.map((r,i)=>(
+              {weeklyProj.length === 0 && (
+                <tr><td colSpan={6} style={{ padding:"24px",textAlign:"center",fontSize:"12px",color:"var(--text-muted)" }}>Sem lançamentos futuros em aberto.</td></tr>
+              )}
+              {weeklyProj.map((r,i)=>(
                 <tr key={r.semana} style={{ borderBottom:"1px solid var(--border)" }}
                   onMouseEnter={e=>(e.currentTarget.style.background="var(--bg-tertiary)")}
                   onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
                   <td style={{ padding:"11px 14px",fontSize:"12px",color:"var(--text-primary)",fontWeight:500 }}>{r.semana}</td>
                   <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",color:"var(--success)",fontWeight:600 }}>
-                    {r.realizado ? `+ ${R(Math.round(r.projetado*0.12))}` : `+ ${R(Math.round((r.projetado||0)*0.14))}`}
+                    {r.entradas > 0 ? `+ ${R(r.entradas)}` : "—"}
                   </td>
                   <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>
-                    {`– ${R(Math.round((r.projetado||280000)*0.1))}`}
+                    {r.saidas > 0 ? `– ${R(r.saidas)}` : "—"}
                   </td>
-                  <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",fontWeight:700,color: r.realizado ? "var(--text-primary)" : "var(--text-muted)" }}>
-                    {r.realizado ? R(r.realizado) : "—"}
+                  <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",fontWeight:700,color: r.realizado != null ? "var(--text-primary)" : "var(--text-muted)" }}>
+                    {r.realizado != null ? R(r.realizado) : "—"}
                   </td>
-                  <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",fontWeight:700,color:(r.projetado||0)<200000?"var(--warning)":"var(--text-primary)" }}>
-                    {R(r.projetado||0)}
+                  <td style={{ padding:"11px 14px",textAlign:"right",fontSize:"12px",fontWeight:700,color:r.projetado<200000?"var(--warning)":"var(--text-primary)" }}>
+                    {R(r.projetado)}
                   </td>
                   <td style={{ padding:"11px 14px" }}>
-                    {r.realizado ? (
-                      <span style={{ fontSize:"10px",fontWeight:700,color:"var(--success)",background:"var(--success-soft)",padding:"2px 8px",borderRadius:"20px" }}>Realizado</span>
+                    {i === 0 ? (
+                      <span style={{ fontSize:"10px",fontWeight:700,color:"var(--success)",background:"var(--success-soft)",padding:"2px 8px",borderRadius:"20px" }}>Atual</span>
                     ) : (
                       <span style={{ fontSize:"10px",fontWeight:700,color:"var(--accent)",background:"var(--accent-soft)",padding:"2px 8px",borderRadius:"20px" }}>Projetado</span>
                     )}
@@ -965,10 +964,10 @@ export default function CashflowPage() {
       )}
 
       {/* ─── Projeção Diária ─── */}
-      {tab===2 && <ProjecaoDiaria/>}
+      {tab===2 && <ProjecaoDiaria saldoAtual={saldoFinal} flow={flow}/>}
 
       {/* ─── Calendário ─── */}
-      {tab===3 && <MoneyCalendar/>}
+      {tab===3 && <MoneyCalendar saldoBase={saldoFinal} transactions={transactions} flow={flow}/>}
 
       {/* ─── Lançar Projeção ─── */}
       {tab===4 && <ProjecaoForm/>}
@@ -982,9 +981,9 @@ export default function CashflowPage() {
                 { l:"Entradas realizadas", v:totalEntradas, c:"var(--success)" },
                 { l:"Saídas realizadas",   v:-totalSaidas,  c:"var(--danger)" },
                 { l:"Saldo do período",    v:saldoFinal-saldoInicial, c:"var(--accent)", bold:true },
-                { l:"A Receber",           v:113500, c:"var(--warning)" },
-                { l:"A Pagar",             v:-103200, c:"var(--warning)" },
-                { l:"Saldo projetado",     v:312400, c:"var(--accent)", bold:true },
+                { l:"A Receber",           v:aReceberTotal, c:"var(--warning)" },
+                { l:"A Pagar",             v:-aPagarTotal, c:"var(--warning)" },
+                { l:"Saldo projetado",     v:saldoFinal + aReceberTotal - aPagarTotal, c:"var(--accent)", bold:true },
               ]},
             { titulo:"Regime de Competência", sub:"Data de geração do fato econômico",
               rows:[
@@ -1031,7 +1030,7 @@ export default function CashflowPage() {
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Saldo Realizado + Projetado</div>
             <ResponsiveContainer width="100%" height={260}>
-              <ComposedChart data={cashflowProjection}>
+              <ComposedChart data={weeklyProj}>
                 <defs>
                   <linearGradient id="cfGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.2}/>
@@ -1051,7 +1050,7 @@ export default function CashflowPage() {
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Entradas vs Saídas — Mês a Mês</div>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={revenueExpenseData.slice(-6)} barGap={4}>
+              <BarChart data={revSeries.slice(-6)} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
                 <XAxis dataKey="mes" tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false}/>
                 <YAxis hide/>

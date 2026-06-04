@@ -6,37 +6,39 @@ import {
 } from "recharts"
 import { TrendingUp, TrendingDown, AlertTriangle, Calendar, Target, ChevronRight } from "lucide-react"
 import { useState } from "react"
-import { revenueExpenseData, cashflowProjection } from "@/lib/mock-data"
+import { useRevenueSeries, useCashflow, useReceivables, usePayables } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
+
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+}
+function buildWeeklyProjection(saldoInicial: number, flow: { vencimento: string; valor: number; tipo: "in"|"out" }[]) {
+  const today = new Date(); today.setHours(0,0,0,0)
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay()+6)%7))
+  const weeks: { semana: string; realizado: number | null; projetado: number }[] = []
+  let saldo = saldoInicial
+  for (let w = 0; w < 8; w++) {
+    const start = new Date(monday); start.setDate(monday.getDate() + w*7)
+    const end = new Date(start); end.setDate(start.getDate() + 6)
+    const si = isoDate(start), ei = isoDate(end)
+    const inWeek = flow.filter(o => o.vencimento >= si && o.vencimento <= ei)
+    const entradas = inWeek.filter(o=>o.tipo==="in").reduce((s,o)=>s+o.valor,0)
+    const saidas = inWeek.filter(o=>o.tipo==="out").reduce((s,o)=>s+o.valor,0)
+    saldo = saldo + entradas - saidas
+    const label = `${String(start.getDate()).padStart(2,"0")}/${String(start.getMonth()+1).padStart(2,"0")}`
+    weeks.push({ semana: `Sem ${label}`, realizado: w===0 ? saldoInicial : null, projetado: saldo })
+  }
+  return weeks
+}
 
 const horizontes = [
   { key: "30", label: "30 dias" },
   { key: "90", label: "90 dias" },
   { key: "180", label: "6 meses" },
   { key: "365", label: "12 meses" },
-]
-
-const projecao12Meses = [
-  ...revenueExpenseData.slice(-3).map(d => ({ mes: d.mes, realizado: d.receita, projetado: null, projetadoDesp: null, realizadoDesp: d.despesa, tipo: "realizado" })),
-  { mes: "Jun", realizado: null, projetado: 320000, projetadoDesp: 294000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Jul", realizado: null, projetado: 335000, projetadoDesp: 302000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Ago", realizado: null, projetado: 318000, projetadoDesp: 297000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Set", realizado: null, projetado: 348000, projetadoDesp: 312000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Out", realizado: null, projetado: 362000, projetadoDesp: 324000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Nov", realizado: null, projetado: 378000, projetadoDesp: 338000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Dez", realizado: null, projetado: 395000, projetadoDesp: 351000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Jan", realizado: null, projetado: 342000, projetadoDesp: 318000, realizadoDesp: null, tipo: "projetado" },
-  { mes: "Fev", realizado: null, projetado: 328000, projetadoDesp: 304000, realizadoDesp: null, tipo: "projetado" },
-]
-
-const projecaoCaixa = [
-  ...cashflowProjection,
-  { semana: "S1 Jul", realizado: null, projetado: 306400 },
-  { semana: "S2 Jul", realizado: null, projetado: 328100 },
-  { semana: "S3 Jul", realizado: null, projetado: 341800 },
-  { semana: "S4 Jul", realizado: null, projetado: 312600 },
 ]
 
 const cenarioResumo = [
@@ -48,6 +50,38 @@ const cenarioResumo = [
 
 export default function ProjecoesPage() {
   const [horizonte, setHorizonte] = useState("90")
+  const { range } = useDateRange()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+  const { rows: cfRows } = useCashflow(range)
+  const { rows: receivables } = useReceivables()
+  const { rows: payables } = usePayables()
+  const saldoInicial = cfRows.length ? cfRows[0].saldo : 0
+  const flow = [
+    ...receivables.map(r => ({ vencimento: r.vencimento, valor: r.valor, tipo: "in" as const })),
+    ...payables.map(p => ({ vencimento: p.vencimento, valor: p.valor, tipo: "out" as const })),
+  ]
+  const cashflowProjection = buildWeeklyProjection(saldoInicial, flow)
+
+  const projecao12Meses = [
+    ...revenueExpenseData.slice(-3).map(d => ({ mes: d.mes, realizado: d.receita, projetado: null, projetadoDesp: null, realizadoDesp: d.despesa, tipo: "realizado" })),
+    { mes: "Jun", realizado: null, projetado: 320000, projetadoDesp: 294000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Jul", realizado: null, projetado: 335000, projetadoDesp: 302000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Ago", realizado: null, projetado: 318000, projetadoDesp: 297000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Set", realizado: null, projetado: 348000, projetadoDesp: 312000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Out", realizado: null, projetado: 362000, projetadoDesp: 324000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Nov", realizado: null, projetado: 378000, projetadoDesp: 338000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Dez", realizado: null, projetado: 395000, projetadoDesp: 351000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Jan", realizado: null, projetado: 342000, projetadoDesp: 318000, realizadoDesp: null, tipo: "projetado" },
+    { mes: "Fev", realizado: null, projetado: 328000, projetadoDesp: 304000, realizadoDesp: null, tipo: "projetado" },
+  ]
+
+  const projecaoCaixa = [
+    ...cashflowProjection,
+    { semana: "S1 Jul", realizado: null, projetado: 306400 },
+    { semana: "S2 Jul", realizado: null, projetado: 328100 },
+    { semana: "S3 Jul", realizado: null, projetado: 341800 },
+    { semana: "S4 Jul", realizado: null, projetado: 312600 },
+  ]
 
   return (
     <div style={{ padding: "20px", maxWidth: "1400px" }}>

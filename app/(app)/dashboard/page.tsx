@@ -7,9 +7,8 @@ import {
 import { TrendingUp, TrendingDown, AlertCircle, AlertTriangle, Info, Minus } from "lucide-react"
 import Link from "next/link"
 import { useDateRange } from "@/lib/date-context"
-import { daysBetween } from "@/lib/filtered-mock"
-import { alerts, cashflowProjection } from "@/lib/mock-data"
-import { useKpis, useRevenueSeries, useTopClients, useHealthDimensions } from "@/lib/analytics-client"
+import { daysBetween } from "@/lib/date-utils"
+import { useKpis, useRevenueSeries, useTopClients, useTopExpenses, useHealthDimensions, useCashflow } from "@/lib/analytics-client"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -58,7 +57,26 @@ function KpiCard({ label, value, sub, trend, color, href }: any) {
   return href ? <Link href={href} style={{ textDecoration:"none" }}>{card}</Link> : card
 }
 
-function AlertChip({ item }: { item: typeof alerts[0] }) {
+type DashAlert = { id: string; severity: "critical" | "warning" | "info"; title: string; message: string }
+
+function deriveAlerts(kpis: {
+  inadimplencia: number; aReceberVencido: number; aPagarVencido: number; saldoProjetado: number; faturamentoVar: number
+}): DashAlert[] {
+  const out: DashAlert[] = []
+  if (kpis.saldoProjetado < 0)
+    out.push({ id: "cx", severity: "critical", title: "Caixa negativo projetado", message: `O saldo projetado para os próximos 30 dias está negativo em ${R(Math.abs(kpis.saldoProjetado))}. Reveja recebimentos e despesas.` })
+  if (kpis.inadimplencia > 5)
+    out.push({ id: "inad", severity: "warning", title: "Inadimplência acima do limite", message: `Taxa de ${kpis.inadimplencia}% (${R(kpis.aReceberVencido)} em atraso). O limite saudável é 5%.` })
+  if (kpis.aPagarVencido > 0)
+    out.push({ id: "pag", severity: "warning", title: "Contas a pagar vencidas", message: `Há ${R(kpis.aPagarVencido)} em contas a pagar já vencidas. Verifique o caixa disponível.` })
+  if (kpis.faturamentoVar < 0)
+    out.push({ id: "fat", severity: "info", title: "Faturamento em queda", message: `Faturamento ${kpis.faturamentoVar}% vs período anterior. Acompanhe a recuperação de receita.` })
+  if (out.length === 0)
+    out.push({ id: "ok", severity: "info", title: "Sem alertas críticos", message: "Os indicadores estão dentro dos limites saudáveis para o período." })
+  return out
+}
+
+function AlertChip({ item }: { item: DashAlert }) {
   const map = {
     critical:{ bg:"var(--danger-soft)",  border:"var(--danger)",  icon:AlertCircle,  c:"var(--danger)" },
     warning: { bg:"var(--warning-soft)", border:"var(--warning)", icon:AlertTriangle, c:"var(--warning)" },
@@ -80,12 +98,8 @@ function AlertChip({ item }: { item: typeof alerts[0] }) {
 }
 
 const PIE_COLORS = ["var(--accent)","var(--success)","var(--purple)","var(--warning)","var(--text-muted)"]
-
-const cashInDrivers = [
-  { nome:"Obras e medições", valor:248000, percent:79.5, detalhe:"Melhor origem: Obra 07", cor:"var(--accent)" },
-  { nome:"Contratos recorrentes", valor:42000, percent:13.5, detalhe:"Mais previsível", cor:"var(--success)" },
-  { nome:"Serviços técnicos", valor:14000, percent:4.5, detalhe:"Maior margem unitária", cor:"var(--purple)" },
-]
+const IN_COLORS = ["var(--accent)","var(--success)","var(--purple)"]
+const OUT_COLORS = ["var(--danger)","var(--warning)","var(--purple)"]
 
 function compactCurrency(value: number) {
   if (value >= 1000000) return `R$ ${(value / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`
@@ -93,21 +107,32 @@ function compactCurrency(value: number) {
   return R(value)
 }
 
-const cashOutDrivers = [
-  { nome:"Folha e equipe", valor:98400, percent:34.2, detalhe:"Maior saída fixa", cor:"var(--danger)" },
-  { nome:"Materiais e insumos", valor:72800, percent:25.3, detalhe:"Afeta margem das obras", cor:"var(--warning)" },
-  { nome:"Subempreiteiros", valor:48600, percent:16.9, detalhe:"Custo direto variável", cor:"var(--purple)" },
-]
-
 export default function DashboardPage() {
   const { range } = useDateRange()
   const { kpis } = useKpis(range)
   const { series } = useRevenueSeries(range)
   const { rows: topClients } = useTopClients()
+  const { rows: topExpenses } = useTopExpenses()
+  const { rows: cashRows } = useCashflow(range)
   const { dims: healthDimensions } = useHealthDimensions()
   const days   = daysBetween(range.start, range.end)
   const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
   const liquidoSeries = series.map(d => ({ ...d, liquido: d.receita - d.despesa }))
+
+  const cashInDrivers = topClients.slice(0, 3).map((c, i) => ({ nome: c.nome, valor: c.valor, percent: c.percent, detalhe: "Entrada por cliente", cor: IN_COLORS[i] }))
+  const cashOutDrivers = topExpenses.slice(0, 3).map((c, i) => ({ nome: c.nome, valor: c.valor, percent: c.percent, detalhe: "Saída por categoria", cor: OUT_COLORS[i] }))
+  const topClient = topClients[0]
+  const topExpense = topExpenses[0]
+  const top3Concent = topClients.slice(0, 3).reduce((s, c) => s + c.percent, 0)
+  const alerts = deriveAlerts(kpis)
+
+  const cashProj: { semana: string; realizado: number | null; projetado: number }[] =
+    cashRows.slice(-8).map((r) => ({
+      semana: new Date(r.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+      realizado: r.saldo,
+      projetado: r.saldo,
+    }))
+  if (cashProj.length) cashProj.push({ semana: "Proj. 30d", realizado: null, projetado: kpis.saldoProjetado })
 
   return (
     <div style={{ padding:"22px", maxWidth:"1600px" }}>
@@ -119,7 +144,7 @@ export default function DashboardPage() {
           Atenção — {healthScore}/10
         </div>
         <span style={{ fontSize:"12px",color:"var(--text-secondary)",flex:1 }}>
-          Inadimplência em {kpis.inadimplencia}%, concentração de receita (Construtora Beta = 48%) e risco de caixa negativo em junho.
+          Inadimplência em {kpis.inadimplencia}%{topClient ? `, concentração de receita (${topClient.nome} = ${topClient.percent.toFixed(0)}%)` : ""} e atenção ao caixa projetado.
         </span>
         <Link href="/diagnostic" style={{ fontSize:"12px",color:"var(--warning)",textDecoration:"none",fontWeight:600,flexShrink:0 }}>Ver diagnóstico →</Link>
         <div style={{ fontSize:"11px",color:"var(--text-muted)",borderLeft:"1px solid var(--border)",paddingLeft:"14px",flexShrink:0 }}>{range.label}</div>
@@ -196,7 +221,7 @@ export default function DashboardPage() {
             <Link href="/cashflow" style={{ fontSize:"11px",color:"var(--accent)",textDecoration:"none" }}>Ver →</Link>
           </div>
           <ResponsiveContainer width="100%" height={150}>
-            <AreaChart data={cashflowProjection}>
+            <AreaChart data={cashProj}>
               <defs>
                 <linearGradient id="cfMini" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.2}/>
@@ -228,13 +253,13 @@ export default function DashboardPage() {
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"12px" }}>
             <div style={{ background:"var(--success-soft)",border:"1px solid rgba(16,185,129,0.18)",borderRadius:"8px",padding:"9px" }}>
               <div style={{ fontSize:"9.5px",color:"var(--success)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.4px" }}>Melhor entrada</div>
-              <div style={{ fontSize:"13px",fontWeight:800,color:"var(--text-primary)",marginTop:"3px" }}>Obras</div>
-              <div style={{ fontSize:"11px",fontWeight:700,color:"var(--success)" }}>{R(248000)}</div>
+              <div style={{ fontSize:"13px",fontWeight:800,color:"var(--text-primary)",marginTop:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{topClient?.nome ?? "—"}</div>
+              <div style={{ fontSize:"11px",fontWeight:700,color:"var(--success)" }}>{R(topClient?.valor ?? 0)}</div>
             </div>
             <div style={{ background:"var(--danger-soft)",border:"1px solid rgba(244,63,94,0.18)",borderRadius:"8px",padding:"9px" }}>
               <div style={{ fontSize:"9.5px",color:"var(--danger)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.4px" }}>Maior saída</div>
-              <div style={{ fontSize:"13px",fontWeight:800,color:"var(--text-primary)",marginTop:"3px" }}>Folha</div>
-              <div style={{ fontSize:"11px",fontWeight:700,color:"var(--danger)" }}>{R(98400)}</div>
+              <div style={{ fontSize:"13px",fontWeight:800,color:"var(--text-primary)",marginTop:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{topExpense?.nome ?? "—"}</div>
+              <div style={{ fontSize:"11px",fontWeight:700,color:"var(--danger)" }}>{R(topExpense?.valor ?? 0)}</div>
             </div>
           </div>
 
@@ -314,7 +339,7 @@ export default function DashboardPage() {
             </div>
           ))}
           <Link href="/delinquent" style={{ display:"block",marginTop:"8px",padding:"6px 8px",background:"var(--danger-soft)",borderRadius:"6px",textDecoration:"none" }}>
-            <span style={{ fontSize:"10px",color:"var(--danger)",fontWeight:700 }}>Top 3 = 93% — ver inadimplentes →</span>
+            <span style={{ fontSize:"10px",color:"var(--danger)",fontWeight:700 }}>Top 3 = {top3Concent.toFixed(0)}% — ver inadimplentes →</span>
           </Link>
         </div>
 

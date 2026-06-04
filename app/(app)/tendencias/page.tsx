@@ -5,91 +5,12 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts"
 import { TrendingUp, TrendingDown, Minus, ChevronRight, ArrowRight } from "lucide-react"
-import { revenueExpenseData } from "@/lib/mock-data"
+import { useRevenueSeries } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 import { useState } from "react"
 
 const R = formatCurrency
-
-const categoriasTendencia = [
-  {
-    nome: "Faturamento",
-    tendencia: "crescimento",
-    variacao: "+18,2%",
-    valor: 312000,
-    dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.receita })),
-    cor: "var(--accent)",
-    descricao: "Crescimento consistente nos últimos 3 meses, impulsionado pelo contrato da Obra 07.",
-  },
-  {
-    nome: "Despesas Totais",
-    tendencia: "crescimento",
-    variacao: "+13,4%",
-    valor: 288000,
-    dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.despesa })),
-    cor: "var(--danger)",
-    descricao: "Despesas crescendo mais rápido que o ideal. Folha de pagamento é o principal driver.",
-  },
-  {
-    nome: "Lucro",
-    tendencia: "estavel",
-    variacao: "+1,2%",
-    valor: 18400,
-    dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.receita - d.despesa })),
-    cor: "var(--success)",
-    descricao: "Lucro estável, mas margem em compressão devido ao crescimento assimétrico de despesas.",
-  },
-  {
-    nome: "Folha de Pagamento",
-    tendencia: "crescimento_preocupante",
-    variacao: "+19% acima meta",
-    valor: 98400,
-    dados: [
-      { mes: "Jun", valor: 82000 }, { mes: "Jul", valor: 84000 }, { mes: "Ago", valor: 86000 },
-      { mes: "Set", valor: 88000 }, { mes: "Out", valor: 90000 }, { mes: "Nov", valor: 92000 },
-      { mes: "Dez", valor: 91000 }, { mes: "Jan", valor: 93000 }, { mes: "Fev", valor: 94000 },
-      { mes: "Mar", valor: 96000 }, { mes: "Abr", valor: 97000 }, { mes: "Mai", valor: 98400 },
-    ],
-    cor: "var(--warning)",
-    descricao: "Crescimento de 19,5% em 12 meses. Meta era de até 8%. Principal compressor de margem.",
-  },
-  {
-    nome: "Materiais e Insumos",
-    tendencia: "estavel",
-    variacao: "+5,1%",
-    valor: 72800,
-    dados: [
-      { mes: "Jun", valor: 64000 }, { mes: "Jul", valor: 66000 }, { mes: "Ago", valor: 68000 },
-      { mes: "Set", valor: 67000 }, { mes: "Out", valor: 70000 }, { mes: "Nov", valor: 71000 },
-      { mes: "Dez", valor: 69000 }, { mes: "Jan", valor: 68000 }, { mes: "Fev", valor: 70000 },
-      { mes: "Mar", valor: 71000 }, { mes: "Abr", valor: 72000 }, { mes: "Mai", valor: 72800 },
-    ],
-    cor: "var(--info)",
-    descricao: "Crescimento proporcional ao volume de obras. Tendência saudável e controlada.",
-  },
-  {
-    nome: "Inadimplência",
-    tendencia: "queda_necessaria",
-    variacao: "+4,2pp em 3 meses",
-    valor: 19.9,
-    valorLabel: "19,9%",
-    dados: [
-      { mes: "Jun", valor: 12 }, { mes: "Jul", valor: 13 }, { mes: "Ago", valor: 11 },
-      { mes: "Set", valor: 10 }, { mes: "Out", valor: 13 }, { mes: "Nov", valor: 14 },
-      { mes: "Dez", valor: 11 }, { mes: "Jan", valor: 13 }, { mes: "Fev", valor: 15 },
-      { mes: "Mar", valor: 16 }, { mes: "Abr", valor: 18 }, { mes: "Mai", valor: 19.9 },
-    ],
-    cor: "var(--danger)",
-    descricao: "Piora consistente nos últimos 3 meses. Exige ação imediata. Referência saudável: até 5%.",
-  },
-]
-
-const sazonalidadeData = revenueExpenseData.map((d, i) => ({
-  mes: d.mes,
-  receita: d.receita,
-  mesesAnteriores: i >= 12 ? revenueExpenseData[i - 12]?.receita : undefined,
-  variacao: i > 0 ? ((d.receita - revenueExpenseData[i - 1].receita) / revenueExpenseData[i - 1].receita * 100).toFixed(1) : "0",
-}))
 
 function TendenciaIcon({ t }: { t: string }) {
   if (t === "crescimento") return <TrendingUp size={14} style={{ color: "var(--success)" }} />
@@ -98,6 +19,93 @@ function TendenciaIcon({ t }: { t: string }) {
 }
 
 export default function TendenciasPage() {
+  const { range } = useDateRange()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+
+  const categoriasTendencia = [
+    {
+      nome: "Faturamento",
+      tendencia: "crescimento",
+      variacao: "+18,2%",
+      valor: 312000,
+      dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.receita })),
+      cor: "var(--accent)",
+      descricao: "Crescimento consistente nos últimos 3 meses, impulsionado pelo contrato da Obra 07.",
+    },
+    {
+      nome: "Despesas Totais",
+      tendencia: "crescimento",
+      variacao: "+13,4%",
+      valor: 288000,
+      dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.despesa })),
+      cor: "var(--danger)",
+      descricao: "Despesas crescendo mais rápido que o ideal. Folha de pagamento é o principal driver.",
+    },
+    {
+      nome: "Lucro",
+      tendencia: "estavel",
+      variacao: "+1,2%",
+      valor: 18400,
+      dados: revenueExpenseData.map(d => ({ mes: d.mes, valor: d.receita - d.despesa })),
+      cor: "var(--success)",
+      descricao: "Lucro estável, mas margem em compressão devido ao crescimento assimétrico de despesas.",
+    },
+    {
+      nome: "Folha de Pagamento",
+      tendencia: "crescimento_preocupante",
+      variacao: "+19% acima meta",
+      valor: 98400,
+      dados: [
+        { mes: "Jun", valor: 82000 }, { mes: "Jul", valor: 84000 }, { mes: "Ago", valor: 86000 },
+        { mes: "Set", valor: 88000 }, { mes: "Out", valor: 90000 }, { mes: "Nov", valor: 92000 },
+        { mes: "Dez", valor: 91000 }, { mes: "Jan", valor: 93000 }, { mes: "Fev", valor: 94000 },
+        { mes: "Mar", valor: 96000 }, { mes: "Abr", valor: 97000 }, { mes: "Mai", valor: 98400 },
+      ],
+      cor: "var(--warning)",
+      descricao: "Crescimento de 19,5% em 12 meses. Meta era de até 8%. Principal compressor de margem.",
+    },
+    {
+      nome: "Materiais e Insumos",
+      tendencia: "estavel",
+      variacao: "+5,1%",
+      valor: 72800,
+      dados: [
+        { mes: "Jun", valor: 64000 }, { mes: "Jul", valor: 66000 }, { mes: "Ago", valor: 68000 },
+        { mes: "Set", valor: 67000 }, { mes: "Out", valor: 70000 }, { mes: "Nov", valor: 71000 },
+        { mes: "Dez", valor: 69000 }, { mes: "Jan", valor: 68000 }, { mes: "Fev", valor: 70000 },
+        { mes: "Mar", valor: 71000 }, { mes: "Abr", valor: 72000 }, { mes: "Mai", valor: 72800 },
+      ],
+      cor: "var(--info)",
+      descricao: "Crescimento proporcional ao volume de obras. Tendência saudável e controlada.",
+    },
+    {
+      nome: "Inadimplência",
+      tendencia: "queda_necessaria",
+      variacao: "+4,2pp em 3 meses",
+      valor: 19.9,
+      valorLabel: "19,9%",
+      dados: [
+        { mes: "Jun", valor: 12 }, { mes: "Jul", valor: 13 }, { mes: "Ago", valor: 11 },
+        { mes: "Set", valor: 10 }, { mes: "Out", valor: 13 }, { mes: "Nov", valor: 14 },
+        { mes: "Dez", valor: 11 }, { mes: "Jan", valor: 13 }, { mes: "Fev", valor: 15 },
+        { mes: "Mar", valor: 16 }, { mes: "Abr", valor: 18 }, { mes: "Mai", valor: 19.9 },
+      ],
+      cor: "var(--danger)",
+      descricao: "Piora consistente nos últimos 3 meses. Exige ação imediata. Referência saudável: até 5%.",
+    },
+  ]
+
+  const sazonalidadeData = revenueExpenseData.map((d, i) => ({
+    mes: d.mes,
+    receita: d.receita,
+    mesesAnteriores: i >= 12 ? revenueExpenseData[i - 12]?.receita : undefined,
+    variacao: i > 0 ? ((d.receita - (revenueExpenseData[i - 1]?.receita ?? d.receita)) / (revenueExpenseData[i - 1]?.receita || 1) * 100).toFixed(1) : "0",
+  }))
+
+  const receitaMedia = revenueExpenseData.length > 0
+    ? revenueExpenseData.reduce((s, d) => s + d.receita, 0) / revenueExpenseData.length
+    : 0
+
   const [selecionado, setSelecionado] = useState(categoriasTendencia[0])
 
   return (
@@ -206,7 +214,9 @@ export default function TendenciasPage() {
             <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
             <Tooltip contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border-strong)", borderRadius: "8px", fontSize: "11px" }} formatter={(v: any) => [R(v), "Receita"]} />
-            <ReferenceLine y={revenueExpenseData.reduce((s, d) => s + d.receita, 0) / revenueExpenseData.length} stroke="var(--accent)" strokeDasharray="4 4" label={{ value: "Média", fontSize: 10, fill: "var(--accent)" }} />
+            {receitaMedia > 0 && (
+              <ReferenceLine y={receitaMedia} stroke="var(--accent)" strokeDasharray="4 4" label={{ value: "Média", fontSize: 10, fill: "var(--accent)" }} />
+            )}
             <Bar dataKey="receita" fill="var(--accent)" radius={[3, 3, 0, 0]} opacity={0.8} />
           </BarChart>
         </ResponsiveContainer>

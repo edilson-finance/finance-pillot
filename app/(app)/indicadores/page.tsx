@@ -4,7 +4,8 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts"
 import { TrendingUp, TrendingDown, Minus, Info, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react"
-import { kpiData, revenueExpenseData } from "@/lib/mock-data"
+import { useKpis, useRevenueSeries } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -75,6 +76,10 @@ function SparkLine({ data, color }: { data: number[]; color: string }) {
 const statusColor = (s: string) => s === "saudavel" ? "var(--success)" : s === "atencao" ? "var(--warning)" : "var(--danger)"
 
 export default function IndicadoresPage() {
+  const { range } = useDateRange()
+  const { kpis } = useKpis(range)
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+
   const totalIndicadores = indicadores.reduce((s, g) => s + g.items.length, 0)
   const saudaveis = indicadores.flatMap(g => g.items).filter(i => i.status === "saudavel").length
   const atencao = indicadores.flatMap(g => g.items).filter(i => i.status === "atencao").length

@@ -7,7 +7,8 @@ import {
   TrendingUp, TrendingDown, DollarSign, AlertTriangle, Users, Package,
   Calendar, Zap, ChevronRight, ArrowRight,
 } from "lucide-react"
-import { revenueExpenseData } from "@/lib/mock-data"
+import { useRevenueSeries } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -71,18 +72,21 @@ const eventos = [
   },
 ]
 
-const timelineChart = revenueExpenseData.map((d, i) => ({
-  mes: d.mes,
-  receita: d.receita,
-  despesa: d.despesa,
-  lucro: d.receita - d.despesa,
-  evento: eventos.find(e => {
-    const idx = ["Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez", "Jan", "Fev", "Mar", "Abr", "Mai"].indexOf(d.mes)
-    return e.data === ["2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05"][idx]
-  }),
-}))
-
 export default function TimelinePage() {
+  const { range } = useDateRange()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+
+  const timelineChart = revenueExpenseData.map((d) => ({
+    mes: d.mes,
+    receita: d.receita,
+    despesa: d.despesa,
+    lucro: d.receita - d.despesa,
+    evento: eventos.find(e => {
+      const idx = ["Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez", "Jan", "Fev", "Mar", "Abr", "Mai"].indexOf(d.mes)
+      return idx !== -1 && e.data === ["2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05"][idx]
+    }),
+  }))
+
   return (
     <div style={{ padding: "20px", maxWidth: "1400px" }}>
 

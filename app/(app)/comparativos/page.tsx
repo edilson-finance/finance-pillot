@@ -6,7 +6,8 @@ import {
 } from "recharts"
 import { GitCompare, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { useState } from "react"
-import { revenueExpenseData } from "@/lib/mock-data"
+import { useRevenueSeries } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -18,20 +19,6 @@ const periodos = [
 ]
 
 const dimensoes = ["Receita", "Despesa", "Lucro", "Margem %"]
-
-const comparativoMensal = revenueExpenseData.slice(-6).map((d, i) => {
-  const ant = revenueExpenseData[revenueExpenseData.length - 6 - 6 + i] || revenueExpenseData[0]
-  return {
-    mes: d.mes,
-    atual_receita: d.receita,
-    anterior_receita: ant.receita,
-    atual_despesa: d.despesa,
-    anterior_despesa: ant.despesa,
-    atual_lucro: d.receita - d.despesa,
-    anterior_lucro: ant.receita - ant.despesa,
-    variacao_receita: parseFloat(((d.receita - ant.receita) / ant.receita * 100).toFixed(1)),
-  }
-})
 
 const comparativoTrimestral = [
   { periodo: "T2 2025", receita: 776000, despesa: 704000, lucro: 72000, margem: 9.3 },
@@ -61,8 +48,25 @@ function Delta({ value, suffix = "%" }: { value: number; suffix?: string }) {
 }
 
 export default function ComparativosPage() {
+  const { range } = useDateRange()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
   const [periodo, setPeriodo] = useState("mensal")
   const [dimensao, setDimensao] = useState("Receita")
+
+  const comparativoMensal = revenueExpenseData.slice(-6).map((d, i) => {
+    const fallback = revenueExpenseData[0] ?? { receita: 0, despesa: 0 }
+    const ant = revenueExpenseData[revenueExpenseData.length - 6 - 6 + i] ?? fallback
+    return {
+      mes: d.mes,
+      atual_receita: d.receita,
+      anterior_receita: ant.receita,
+      atual_despesa: d.despesa,
+      anterior_despesa: ant.despesa,
+      atual_lucro: d.receita - d.despesa,
+      anterior_lucro: ant.receita - ant.despesa,
+      variacao_receita: ant.receita === 0 ? 0 : parseFloat(((d.receita - ant.receita) / ant.receita * 100).toFixed(1)),
+    }
+  })
 
   const keyAtual = `atual_${dimensao.toLowerCase().replace(" %", "").replace("é", "e")}` as keyof typeof comparativoMensal[0]
   const keyAnterior = `anterior_${dimensao.toLowerCase().replace(" %", "").replace("é", "e")}` as keyof typeof comparativoMensal[0]

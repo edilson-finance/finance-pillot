@@ -6,14 +6,8 @@ import {
 } from "recharts"
 import { Activity, TrendingUp, TrendingDown, Minus, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { healthDimensions, revenueExpenseData } from "@/lib/mock-data"
-
-const radarData = healthDimensions.map(d => ({
-  subject: d.nome,
-  atual: d.nota,
-  referencia: 8,
-  fullMark: 10,
-}))
+import { useHealthDimensions, useRevenueSeries } from "@/lib/analytics-client"
+import { useDateRange } from "@/lib/date-context"
 
 const evolucaoRadar = [
   { mes: "Fev", score: 5.8 },
@@ -46,9 +40,22 @@ function getIcon(nota: number) {
   return <TrendingDown size={12} style={{ color: "var(--danger)" }} />
 }
 
-const healthScore = parseFloat((healthDimensions.reduce((s, d) => s + d.nota, 0) / healthDimensions.length).toFixed(1))
-
 export default function RadarPage() {
+  const { range } = useDateRange()
+  const { dims: healthDimensions } = useHealthDimensions()
+  const { series: revenueExpenseData } = useRevenueSeries(range)
+
+  const radarData = healthDimensions.map(d => ({
+    subject: d.nome,
+    atual: d.nota,
+    referencia: 8,
+    fullMark: 10,
+  }))
+
+  const healthScore = healthDimensions.length > 0
+    ? parseFloat((healthDimensions.reduce((s, d) => s + d.nota, 0) / healthDimensions.length).toFixed(1))
+    : 0
+
   return (
     <div style={{ padding: "20px", maxWidth: "1400px" }}>
 

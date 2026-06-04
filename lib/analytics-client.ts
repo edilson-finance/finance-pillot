@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { DateRange } from "@/lib/date-context"
-import { daysBetween, groupLabel } from "@/lib/filtered-mock"
+import { daysBetween, groupLabel } from "@/lib/date-utils"
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
@@ -188,6 +188,48 @@ export function useDre(range: DateRange) {
   }, [range.start.getTime(), range.end.getTime()])
   return { dre, loading }
 }
+
+export interface OpenItem {
+  id: string; nome: string; categoria: string; conta: string
+  vencimento: string; valor: number; status: "previsto" | "em_atraso"
+}
+
+function useOpenItems(
+  table: "receivables" | "payables",
+  partyTable: "customers" | "suppliers",
+) {
+  const [rows, setRows] = useState<OpenItem[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+    supabase
+      .from(table)
+      .select(`*, party:${partyTable}(name), category:categories(name)`)
+      .order("due_date")
+      .then(({ data }) => {
+        if (!active) return
+        const settled = table === "receivables" ? "recebido" : "pago"
+        setRows(((data ?? []) as any[])
+          .filter((r) => r.status !== settled)
+          .map((r) => ({
+            id: r.id,
+            nome: r.party?.name ?? r.description ?? "—",
+            categoria: r.category?.name ?? "—",
+            conta: "—",
+            vencimento: r.due_date,
+            valor: Number(r.amount ?? 0),
+            status: r.status === "em_atraso" ? "em_atraso" : "previsto",
+          })))
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [table, partyTable])
+  return { rows, loading }
+}
+
+export const useReceivables = () => useOpenItems("receivables", "customers")
+export const usePayables = () => useOpenItems("payables", "suppliers")
 
 export interface CashflowRow {
   data: string; descricao: string; categoria: string
