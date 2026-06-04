@@ -262,8 +262,8 @@ export default function DrePage() {
           <div style={{ fontSize:"11px",color:"var(--text-muted)",marginTop:"2px" }}>{range.label} · Padrão NBC TG / CPC</div>
         </div>
         <div style={{ display:"flex",gap:"7px" }}>
-          <Link href="/registers/accounts-plan" style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",textDecoration:"none" }}>
-            <BookOpen size={12}/> Plano de Contas
+          <Link href="/registers/categories" style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",textDecoration:"none" }}>
+            <BookOpen size={12}/> Categorias
           </Link>
           <button onClick={()=>exportPdf("DRE Gerencial", `${range.label} · Padrão NBC TG / CPC`, exportColumns, exportRows)} style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit" }}>
             <Download size={12}/> PDF

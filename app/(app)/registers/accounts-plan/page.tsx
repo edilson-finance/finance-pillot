@@ -1,7 +1,5 @@
-import { listAccountsPlan } from "@/lib/db/accounts-plan"
-import AccountsPlanClient from "./accounts-plan-client"
+import { redirect } from "next/navigation"
 
-export default async function AccountsPlanPage() {
-  const items = await listAccountsPlan()
-  return <AccountsPlanClient items={items} />
+export default function AccountsPlanPage() {
+  redirect("/registers/categories")
 }
