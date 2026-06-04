@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Upload, Plus, Trash2, X, Check as CheckIcon } from "lucide-react"
 import Link from "next/link"
@@ -100,6 +100,82 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: (b: b
       }}>{checked && <CheckIcon size={12} color="#fff" />}</span>
       {label}
     </label>
+  )
+}
+
+// ── combobox com busca inteligente (cliente/fornecedor) ──────────────────────
+const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+
+function Combo({ idName, nameName, options, color, placeholder, required }: {
+  idName: string; nameName: string; options: Opt[]; color: string; placeholder: string; required?: boolean
+}) {
+  const [query, setQuery] = useState("")
+  const [id, setId] = useState("")
+  const [open, setOpen] = useState(false)
+  const [hi, setHi] = useState(0)
+  const box = useRef<HTMLDivElement>(null)
+
+  const tokens = norm(query).split(/\s+/).filter(Boolean)
+  const filtered = options
+    .filter((o) => { const n = norm(o.name); return tokens.every((t) => n.includes(t)) })
+    .slice(0, 50)
+  const exact = options.some((o) => norm(o.name) === norm(query))
+  const showCreate = query.trim() !== "" && !exact
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [])
+
+  const pick = (o: Opt) => { setQuery(o.name); setId(o.id); setOpen(false) }
+
+  return (
+    <div ref={box} style={{ position: "relative" }}>
+      <input type="hidden" name={idName} value={id} />
+      <input
+        name={nameName} required={required} autoComplete="off" value={query} placeholder={placeholder}
+        onChange={(e) => { setQuery(e.target.value); setId(""); setOpen(true); setHi(0) }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { setOpen(true); return }
+          const max = filtered.length - 1
+          if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(max, h + 1)) }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(0, h - 1)) }
+          else if (e.key === "Enter") { if (open && filtered[hi]) { e.preventDefault(); pick(filtered[hi]) } }
+          else if (e.key === "Escape") setOpen(false)
+        }}
+        style={{ ...inp, paddingRight: "32px" }}
+      />
+      <span style={{ position: "absolute", right: "12px", top: "10px", color: "var(--text-muted)", pointerEvents: "none", fontSize: "11px" }}>▾</span>
+      {open && (filtered.length > 0 || showCreate) && (
+        <div style={{
+          position: "absolute", zIndex: 30, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: "240px",
+          overflowY: "auto", background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "10px", boxShadow: "0 12px 28px rgba(0,0,0,0.35)", padding: "5px",
+        }}>
+          {filtered.map((o, i) => (
+            <button type="button" key={o.id} onMouseDown={(e) => { e.preventDefault(); pick(o) }} onMouseEnter={() => setHi(i)}
+              style={{
+                display: "block", width: "100%", textAlign: "left", padding: "9px 11px", borderRadius: "7px",
+                border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "13px",
+                background: i === hi ? `${color}1e` : "transparent", color: i === hi ? color : "var(--text-primary)",
+              }}>{o.name}</button>
+          ))}
+          {showCreate && (
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); setId(""); setOpen(false) }}
+              style={{
+                display: "flex", alignItems: "center", gap: "7px", width: "100%", textAlign: "left",
+                padding: "9px 11px", borderRadius: "7px", border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: "13px", background: "transparent", color: "var(--text-secondary)",
+                borderTop: filtered.length ? "1px solid var(--border)" : "none", marginTop: filtered.length ? "4px" : 0,
+              }}>
+              <Plus size={13} /> Criar novo:&nbsp;<strong style={{ color: "var(--text-primary)" }}>{query}</strong>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -252,8 +328,7 @@ function FormReceita({ o, onDone }: { o: Options; onDone: () => void }) {
       <Section>Cliente</Section>
       <div style={grid2}>
         <Field label="Cliente" req span>
-          <input name="customer_name" list="cust-list" required placeholder="Buscar cliente cadastrado ou digitar nome..." style={inp} />
-          <datalist id="cust-list">{o.customers.map((c) => <option key={c.id} value={c.name} />)}</datalist>
+          <Combo idName="customer_id" nameName="customer_name" options={o.customers} color="var(--success)" required placeholder="Buscar cliente cadastrado ou digitar nome..." />
         </Field>
         <Field label="CPF / CNPJ"><input name="counterparty_doc" placeholder="00.000.000/0001-00" style={inp} /></Field>
         <Field label="Contato (telefone / whatsapp)"><input name="contact" placeholder="(11) 99999-9999" style={inp} /></Field>
@@ -329,8 +404,7 @@ function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
       <Section>Fornecedor</Section>
       <div style={grid2}>
         <Field label="Fornecedor" req span>
-          <input name="supplier_name" list="supp-list" required placeholder="Buscar fornecedor cadastrado..." style={inp} />
-          <datalist id="supp-list">{o.suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+          <Combo idName="supplier_id" nameName="supplier_name" options={o.suppliers} color="var(--danger)" required placeholder="Buscar fornecedor cadastrado ou digitar nome..." />
         </Field>
         <Field label="CPF / CNPJ"><input name="counterparty_doc" placeholder="00.000.000/0001-00" style={inp} /></Field>
         <Field label="Dados Bancários / PIX"><input name="counterparty_bank" placeholder="Chave PIX, banco, agência, conta" style={inp} /></Field>
