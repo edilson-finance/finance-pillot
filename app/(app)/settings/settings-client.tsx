@@ -58,6 +58,8 @@ function Toggle({ label, hint, defaultChecked }: { label: string; hint?: string;
 
 const companyProfiles = Object.values(COMPANY_PROFILES)
 
+const MAX_LOGO_MB = 2
+
 const SEGMENTOS = ["Construção Civil", "Comércio", "Serviços Técnicos", "Consultoria", "Saúde", "Educação", "Tecnologia", "Indústria", "Agro", "Outro"]
 const REGIMES_TRIB = ["Simples Nacional", "Lucro Presumido", "Lucro Real", "MEI"]
 const REGIMES_FIN = ["Caixa", "Competência"]
@@ -131,6 +133,21 @@ export default function SettingsClient({ company }: { company: CompanySettings |
     const file = e.target.files?.[0]
     if (!file) return
     setError(null)
+
+    // Validação no cliente: dá um aviso imediato e evita enviar arquivos que
+    // o servidor recusaria mesmo assim.
+    if (!file.type.startsWith("image/")) {
+      setError("Formato não suportado. Envie uma imagem PNG, JPG ou SVG.")
+      if (fileRef.current) fileRef.current.value = ""
+      return
+    }
+    if (file.size > MAX_LOGO_MB * 1024 * 1024) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1).replace(".", ",")
+      setError(`A imagem tem ${mb} MB e ultrapassa o limite de ${MAX_LOGO_MB} MB. Reduza o tamanho e tente novamente.`)
+      if (fileRef.current) fileRef.current.value = ""
+      return
+    }
+
     const fd = new FormData()
     fd.set("file", file)
     setLogoBusy(true)
