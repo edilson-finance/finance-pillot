@@ -1,11 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Sun, Moon, Bell, ChevronDown, Building2 } from "lucide-react"
+import { Sun, Moon, Bell, ChevronDown } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { useSession } from "@/lib/session-context"
 
 export function Topbar() {
+  const session = useSession()
   const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const companyInitials = session.companyName.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
 
   useEffect(() => {
     const saved = localStorage.getItem("fp-theme") as "dark" | "light" | null
@@ -94,9 +97,9 @@ export function Topbar() {
             borderRadius: "5px",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "9px", fontWeight: 800, color: "var(--accent)",
-          }}>MC</div>
+          }}>{companyInitials || "EM"}</div>
           <span style={{ maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Minha Construtora
+            {session.companyName}
           </span>
           <ChevronDown size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
         </button>

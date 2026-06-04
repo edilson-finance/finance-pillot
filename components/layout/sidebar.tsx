@@ -1,13 +1,21 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Wallet,
   BarChart3, TrendingUp, FileText, RefreshCw, Activity,
-  BrainCircuit, Bell, Settings, Users, Package, Zap, ChevronRight,
+  BrainCircuit, Bell, Settings, Users, Package, Zap, LogOut,
   AlertTriangle,
 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { useSession, canAccess } from "@/lib/session-context"
+
+const ROLE_LABEL: Record<string, string> = {
+  super_admin: "Super Admin",
+  admin: "Administrador",
+  member: "Membro",
+}
 
 const sections = [
   {
@@ -94,6 +102,24 @@ function NavItem({ href, label, icon: Icon, badge }: { href: string; label: stri
 }
 
 export function Sidebar() {
+  const session = useSession()
+  const router = useRouter()
+
+  async function signOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
+
+  const visibleSections = sections
+    .map(sec => ({
+      ...sec,
+      items: sec.items.filter(item => canAccess(session, item.href.replace(/^\//, ""))),
+    }))
+    .filter(sec => sec.items.length > 0)
+
+  const initials = session.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
+
   return (
     <aside style={{
       width: "214px", minWidth: "214px",
@@ -133,7 +159,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav style={{ padding: "8px", flex: 1, overflowY: "auto" }}>
-        {sections.map(sec => (
+        {visibleSections.map(sec => (
           <div key={sec.label}>
             <div style={{
               fontSize: "9px", fontWeight: 700,
@@ -157,7 +183,6 @@ export function Sidebar() {
           padding: "8px 10px",
           borderRadius: "8px",
           background: "var(--bg-tertiary)",
-          cursor: "pointer",
         }}>
           <div style={{
             width: "28px", height: "28px",
@@ -166,12 +191,17 @@ export function Sidebar() {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "11px", fontWeight: 800, color: "#fff",
             flexShrink: 0,
-          }}>E</div>
+          }}>{initials || "U"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>Edils</div>
-            <div style={{ fontSize: "10px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Administrador</div>
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session.name}</div>
+            <div style={{ fontSize: "10px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ROLE_LABEL[session.role] ?? session.role}</div>
           </div>
-          <ChevronRight size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <button onClick={signOut} title="Sair" style={{
+            border: "none", background: "transparent", cursor: "pointer",
+            color: "var(--text-muted)", display: "flex", alignItems: "center", flexShrink: 0, padding: 0,
+          }}>
+            <LogOut size={13} />
+          </button>
         </div>
       </div>
     </aside>

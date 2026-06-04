@@ -1,14 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { Zap, Eye, EyeOff } from "lucide-react"
 import { login } from "./actions"
 
 export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [next, setNext] = useState("")
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get("next")
+    if (n) setNext(n)
+  }, [])
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -74,6 +80,7 @@ export default function LoginPage() {
           padding: "28px",
         }}>
           <form onSubmit={handleSubmit}>
+            <input type="hidden" name="next" value={next} />
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
                 E-mail

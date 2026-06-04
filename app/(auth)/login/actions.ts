@@ -9,5 +9,6 @@ export async function login(formData: FormData) {
     password: String(formData.get("password")),
   })
   if (error) return { error: error.message }
-  redirect("/dashboard")
+  const next = String(formData.get("next") ?? "").trim()
+  redirect(next && next.startsWith("/") ? next : "/dashboard")
 }

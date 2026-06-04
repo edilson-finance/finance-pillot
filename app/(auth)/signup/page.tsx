@@ -1,14 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { Zap, Eye, EyeOff } from "lucide-react"
 import { signup } from "./actions"
 
 export default function SignupPage() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [token, setToken] = useState("")
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("token")
+    if (t) setToken(t)
+  }, [])
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -62,7 +68,7 @@ export default function SignupPage() {
             FinancePilot
           </h1>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Crie sua conta gratuita
+            {token ? "Você foi convidado — crie sua conta para entrar na equipe" : "Crie sua conta gratuita"}
           </p>
         </div>
 
@@ -74,6 +80,30 @@ export default function SignupPage() {
           padding: "28px",
         }}>
           <form onSubmit={handleSubmit}>
+            <input type="hidden" name="token" value={token} />
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
+                Nome
+              </label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Seu nome completo"
+                required
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                  outline: "none",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
             <div style={{ marginBottom: "16px" }}>
               <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
                 E-mail
