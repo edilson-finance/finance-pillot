@@ -149,3 +149,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (max-width: 900px) {
   main { overflow-x: auto; }
 }
+
+/* Spinner de carregamento (ex.: processamento de extrato OFX). */
+@keyframes fp-spin { to { transform: rotate(360deg); } }
+.fp-spin { animation: fp-spin 0.8s linear infinite; }
