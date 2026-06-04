@@ -220,8 +220,10 @@ export function DateRangePicker() {
           boxShadow: "var(--shadow-lg)",
           zIndex: 1000,
           display: "flex",
-          overflow: "hidden",
-          minWidth: "580px",
+          overflowX: "auto",
+          overflowY: "hidden",
+          minWidth: "min(580px, calc(100vw - 24px))",
+          maxWidth: "calc(100vw - 16px)",
         }}>
           {/* Presets */}
           <div style={{

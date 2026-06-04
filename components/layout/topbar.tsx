@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Sun, Moon, Bell, ChevronDown } from "lucide-react"
+import { Sun, Moon, Bell, ChevronDown, Menu } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { useSession } from "@/lib/session-context"
+import { useMobileNav } from "@/lib/mobile-nav"
 
 export function Topbar() {
   const session = useSession()
+  const { isMobile, setOpen } = useMobileNav()
   const [theme, setTheme] = useState<"dark" | "light">("dark")
   const companyInitials = session.companyName.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
 
@@ -38,9 +40,27 @@ export function Topbar() {
       top: 0,
       zIndex: 100,
       flexShrink: 0,
+      gap: "8px",
     }}>
-      {/* Date picker */}
-      <DateRangePicker />
+      {/* Left: hambúrguer (mobile) + date picker */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+        {isMobile && (
+          <button
+            onClick={() => setOpen(true)}
+            title="Menu"
+            style={{
+              width: "32px", height: "32px", flexShrink: 0,
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border)",
+              background: "var(--bg-tertiary)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "var(--text-secondary)",
+            }}>
+            <Menu size={16} />
+          </button>
+        )}
+        <DateRangePicker />
+      </div>
 
       {/* Right */}
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

@@ -116,3 +116,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.6);
   cursor: pointer;
 }
+
+/* ─────────────────────────────────────────
+   Responsividade global
+   As páginas usam inline styles (sem classes),
+   então sobrepomos os grids inline por seletor
+   de atributo + !important dentro de media queries.
+   `:not([style*="repeat(7"])` preserva o calendário
+   e heatmaps de 7 colunas, que NÃO devem empilhar.
+───────────────────────────────────────────── */
+
+/* Tablet: grids densos de cards (4/5/6 colunas) caem para 2 colunas */
+@media (max-width: 1024px) {
+  main [style*="repeat(4"],
+  main [style*="repeat(5"],
+  main [style*="repeat(6"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Celular: empilha praticamente tudo em 1 coluna (exceto grids de 7 col) */
+@media (max-width: 640px) {
+  main [style*="grid-template-columns"]:not([style*="repeat(7"]) {
+    grid-template-columns: 1fr !important;
+  }
+  /* reduz respiro lateral das páginas no celular */
+  main > div { padding: 14px !important; }
+}
+
+/* Em telas estreitas, conteúdo largo (tabelas) rola dentro da área principal
+   em vez de estourar a página inteira. */
+@media (max-width: 900px) {
+  main { overflow-x: auto; }
+}

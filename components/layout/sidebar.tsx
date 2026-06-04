@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect } from "react"
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Wallet,
   BarChart3, TrendingUp, FileText, RefreshCw, Activity,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useSession, canAccess } from "@/lib/session-context"
+import { useMobileNav } from "@/lib/mobile-nav"
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super Admin",
@@ -104,6 +106,11 @@ function NavItem({ href, label, icon: Icon, badge }: { href: string; label: stri
 export function Sidebar() {
   const session = useSession()
   const router = useRouter()
+  const pathname = usePathname()
+  const { open, setOpen, isMobile } = useMobileNav()
+
+  // Fecha a gaveta ao trocar de rota.
+  useEffect(() => { setOpen(false) }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function signOut() {
     const supabase = createClient()
@@ -130,16 +137,41 @@ export function Sidebar() {
 
   const initials = session.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
 
+  const asideStyle: React.CSSProperties = isMobile
+    ? {
+        width: "260px", minWidth: "260px",
+        background: "var(--bg-secondary)",
+        borderRight: "1px solid var(--border)",
+        display: "flex", flexDirection: "column",
+        height: "100vh",
+        position: "fixed", top: 0, left: 0,
+        zIndex: 300,
+        transform: open ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.22s ease",
+        boxShadow: open ? "var(--shadow-lg)" : "none",
+      }
+    : {
+        width: "214px", minWidth: "214px",
+        background: "var(--bg-secondary)",
+        borderRight: "1px solid var(--border)",
+        display: "flex", flexDirection: "column",
+        height: "100vh",
+        position: "sticky", top: 0,
+        flexShrink: 0,
+      }
+
   return (
-    <aside style={{
-      width: "214px", minWidth: "214px",
-      background: "var(--bg-secondary)",
-      borderRight: "1px solid var(--border)",
-      display: "flex", flexDirection: "column",
-      height: "100vh",
-      position: "sticky", top: 0,
-      flexShrink: 0,
-    }}>
+    <>
+    {isMobile && open && (
+      <div
+        onClick={() => setOpen(false)}
+        style={{
+          position: "fixed", inset: 0, zIndex: 290,
+          background: "rgba(0,0,0,0.5)",
+        }}
+      />
+    )}
+    <aside style={asideStyle}>
       {/* Logo */}
       <div style={{
         padding: "14px 14px 12px",
@@ -215,5 +247,6 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }
