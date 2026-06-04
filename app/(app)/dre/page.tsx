@@ -5,6 +5,7 @@ import { ChevronRight, Download, Settings2, Eye, EyeOff, TrendingUp, TrendingDow
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { useDre } from "@/lib/analytics-client"
+import { exportCsv, exportPdf, type ExportColumn } from "@/lib/export"
 import Link from "next/link"
 
 const R = formatCurrency
@@ -235,6 +236,21 @@ export default function DrePage() {
     { l:"Lucro Líquido",     v:R(llV), pct:pctOf(llV), c: llV>=0?"var(--success)":"var(--warning)" },
   ]
 
+  type DreExportRow = { conta: string; valor: number; pct: number }
+  const exportRows = useMemo<DreExportRow[]>(() => {
+    const out: DreExportRow[] = []
+    for (const n of dreNodes) {
+      out.push({ conta: n.label, valor: n.valor, pct: n.pct })
+      for (const f of n.filhos ?? []) out.push({ conta: `    ${f.label}`, valor: f.valor, pct: f.pct })
+    }
+    return out
+  }, [dreNodes])
+  const exportColumns: ExportColumn<DreExportRow>[] = [
+    { header:"Conta / Descrição", value:(r)=>r.conta },
+    { header:"Valor",             value:(r)=>R(r.valor), align:"right" },
+    { header:"% Receita",         value:(r)=>r.pct!==0?`${r.pct.toFixed(1)}%`:"—", align:"right" },
+  ]
+
   return (
     <div style={{ padding:"22px" }}>
       {/* Header */}
@@ -247,10 +263,10 @@ export default function DrePage() {
           <Link href="/registers/accounts-plan" style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",textDecoration:"none" }}>
             <BookOpen size={12}/> Plano de Contas
           </Link>
-          <button style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit" }}>
+          <button onClick={()=>exportPdf("DRE Gerencial", `${range.label} · Padrão NBC TG / CPC`, exportColumns, exportRows)} style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit" }}>
             <Download size={12}/> PDF
           </button>
-          <button style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit" }}>
+          <button onClick={()=>exportCsv("dre-gerencial", exportColumns, exportRows)} style={{ display:"flex",alignItems:"center",gap:"5px",padding:"7px 13px",background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"7px",fontSize:"12px",color:"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit" }}>
             <Download size={12}/> Excel
           </button>
         </div>

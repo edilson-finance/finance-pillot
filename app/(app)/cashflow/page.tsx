@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, Alert
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { useCashflow, useReceivables, usePayables, useRevenueSeries, type OpenItem } from "@/lib/analytics-client"
+import { exportCsv } from "@/lib/export"
 import Link from "next/link"
 
 const R = formatCurrency
@@ -829,7 +830,21 @@ export default function CashflowPage() {
           <div style={{ fontSize:"11px", color:"var(--text-muted)", marginTop:"2px" }}>{range.label}</div>
         </div>
         <div style={{ display:"flex", gap:"6px" }}>
-          <button style={{ display:"flex", alignItems:"center", gap:"5px", padding:"7px 13px", background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"7px", fontSize:"12px", color:"var(--text-secondary)", cursor:"pointer" }}>
+          <button
+            onClick={() => exportCsv(
+              "fluxo-de-caixa",
+              [
+                { header:"Data",      value:(r:CashRow)=>formatDate(r.data) },
+                { header:"Descrição", value:(r:CashRow)=>r.descricao },
+                { header:"Categoria", value:(r:CashRow)=>r.categoria },
+                { header:"Entrada",   value:(r:CashRow)=>r.entrada ?? 0 },
+                { header:"Saída",     value:(r:CashRow)=>r.saida ?? 0 },
+                { header:"Saldo",     value:(r:CashRow)=>r.saldo },
+              ],
+              transactions,
+            )}
+            disabled={transactions.length === 0}
+            style={{ display:"flex", alignItems:"center", gap:"5px", padding:"7px 13px", background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"7px", fontSize:"12px", color:"var(--text-secondary)", cursor: transactions.length ? "pointer" : "not-allowed", opacity: transactions.length ? 1 : 0.5 }}>
             <Download size={13}/> Exportar
           </button>
           <Link href="/transactions" style={{
