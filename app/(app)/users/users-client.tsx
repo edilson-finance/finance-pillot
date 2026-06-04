@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail, User, ChevronDown, ChevronUp, Pencil, Ban, RotateCcw } from "lucide-react"
 import { MEMBER_MODULES } from "@/lib/modules"
 import { createInvite, revokeInvite, updateUserRole, setMemberPermissions, removeUser, updateUserName, setUserActive } from "./actions"
@@ -61,8 +62,10 @@ export default function UsersClient({
   const [editingName, setEditingName] = useState<CompanyUser | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [addedMsg, setAddedMsg] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   // Invite form state
   const [invRole, setInvRole] = useState<"admin" | "member">("member")
@@ -70,18 +73,26 @@ export default function UsersClient({
 
   function submitInvite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null); setInviteLink(null)
+    setError(null); setInviteLink(null); setAddedMsg(null)
     const fd = new FormData(e.currentTarget)
     fd.set("role", invRole)
     fd.delete("modules")
     if (invRole === "member") {
       Object.entries(invModules).forEach(([k, v]) => { if (v) fd.append("modules", k) })
     }
+    const form = e.currentTarget
     startTransition(async () => {
       const res = await createInvite(fd)
       if (res.error) { setError(res.error); return }
+      if (res.added) {
+        setAddedMsg(`${res.addedName || "Usuário"} já tinha conta e foi adicionado à sua empresa.`)
+        form.reset?.()
+        setInvModules({})
+        router.refresh()
+        return
+      }
       setInviteLink(res.link ?? null)
-      ;(e.target as HTMLFormElement).reset?.()
+      form.reset?.()
       setInvModules({})
     })
   }
@@ -138,7 +149,7 @@ export default function UsersClient({
           <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.4px" }}>Usuários e Permissões</h1>
           <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Gerencie quem acessa o sistema e o que cada membro pode ver</p>
         </div>
-        <button onClick={() => { setShowInvite(v => !v); setInviteLink(null); setError(null) }} style={{ ...btnPrimary, display: "flex", alignItems: "center", gap: "6px" }}>
+        <button onClick={() => { setShowInvite(v => !v); setInviteLink(null); setAddedMsg(null); setError(null) }} style={{ ...btnPrimary, display: "flex", alignItems: "center", gap: "6px" }}>
           <Plus size={13} /> Convidar usuário
         </button>
       </div>
@@ -192,6 +203,12 @@ export default function UsersClient({
             </button>
             <button type="button" onClick={() => setShowInvite(false)} style={btnGhost}>Cancelar</button>
           </div>
+
+          {addedMsg && (
+            <div style={{ marginTop: "16px", padding: "12px 14px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", borderRadius: "8px", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "var(--success)" }}>
+              <Check size={13} /> {addedMsg}
+            </div>
+          )}
 
           {inviteLink && (
             <div style={{ marginTop: "16px", padding: "12px 14px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", borderRadius: "8px" }}>

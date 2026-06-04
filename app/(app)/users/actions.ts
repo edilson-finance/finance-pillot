@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 
 type Result = { error: string | null }
-type InviteResult = Result & { link?: string }
+type InviteResult = Result & { link?: string; added?: boolean; addedName?: string }
 
 async function siteOrigin(): Promise<string> {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
@@ -28,6 +28,26 @@ export async function createInvite(formData: FormData): Promise<InviteResult> {
   const { data: profile } = await supabase
     .from("profiles").select("company_id").eq("id", user.id).single()
   if (!profile?.company_id) return { error: "Empresa não encontrada" }
+
+  // Convite inteligente: se o e-mail já tem conta no sistema, vincula a pessoa
+  // direto à empresa ativa (sem tentar criar conta nova, o que daria
+  // "usuário já existe"). Só cai no convite por link quando não há conta.
+  const { data: addRes, error: addErr } = await supabase.rpc("fn_company_add_existing_user", {
+    p_email: email,
+    p_role: role,
+    p_modules: role === "member" ? modules : [],
+  })
+  if (addErr) return { error: addErr.message }
+  const status = (addRes as { status?: string } | null)?.status
+  const addedName = (addRes as { name?: string } | null)?.name
+  if (status === "added") {
+    revalidatePath("/users")
+    return { error: null, added: true, addedName: addedName || email }
+  }
+  if (status === "already_member") {
+    return { error: "Este usuário já faz parte da sua empresa." }
+  }
+  // status "not_found" ou "no_profile" → segue com o convite por link abaixo.
 
   const { data: invite, error } = await supabase
     .from("invites")
