@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { BrainCircuit, Loader2, Send, Sparkles } from "lucide-react"
 import { useDateRange } from "@/lib/date-context"
-import { generateKpis } from "@/lib/filtered-mock"
+import { useKpis, type Kpis } from "@/lib/analytics-client"
 import { useCompany } from "@/lib/company-context"
 import { formatCurrency } from "@/lib/utils"
 
@@ -34,7 +34,7 @@ function SectionText({ text }: { text: string }) {
   )
 }
 
-function buildBrief(kpis: ReturnType<typeof generateKpis>, profileLabel: string, focus: string, revenueWord: string, period: string) {
+function buildBrief(kpis: Kpis, profileLabel: string, focus: string, revenueWord: string, period: string) {
   return `## Leitura inicial do CFO AI
 
 ### O que está acontecendo
@@ -67,13 +67,14 @@ const questions = [
 export default function DiagnosticPage() {
   const { range } = useDateRange()
   const { companyProfile } = useCompany()
-  const kpis = generateKpis(range)
-  const initialMessage = useMemo(
+  const { kpis, loading: kpisLoading } = useKpis(range)
+
+  const brief = useMemo(
     () => buildBrief(kpis, companyProfile.label, companyProfile.reportFocus, companyProfile.language.revenue, range.label),
     [companyProfile.label, companyProfile.language.revenue, companyProfile.reportFocus, kpis, range.label],
   )
 
-  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: initialMessage }])
+  const [messages, setMessages] = useState<Message[]>([])
   const [question, setQuestion] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -98,7 +99,6 @@ export default function DiagnosticPage() {
       aPagarVencido: R(kpis.aPagarVencido),
       inadimplencia: `${kpis.inadimplencia}%`,
       capitalGiro: R(kpis.capitalGiro),
-      pontoEquilibrio: R(kpis.pontoEquilibrio),
     },
   }
 
@@ -179,6 +179,18 @@ export default function DiagnosticPage() {
           </div>
 
           <div style={{ minHeight: "520px", padding: "18px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            {kpisLoading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)", fontSize: "12px" }}>
+                <Loader2 size={14} />
+                Carregando dados financeiros do período...
+              </div>
+            ) : (
+              <div style={{ alignSelf: "stretch", maxWidth: "100%" }}>
+                <div style={{ padding: "16px", borderRadius: "14px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <SectionText text={brief} />
+                </div>
+              </div>
+            )}
             {messages.map((message, index) => (
               <div key={index} style={{ alignSelf: message.role === "user" ? "flex-end" : "stretch", maxWidth: message.role === "user" ? "78%" : "100%" }}>
                 <div style={{
