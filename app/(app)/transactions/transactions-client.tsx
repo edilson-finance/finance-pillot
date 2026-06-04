@@ -179,6 +179,92 @@ function Combo({ idName, nameName, options, color, placeholder, required }: {
   )
 }
 
+// ── combobox de seleção com busca (conjunto fechado: categoria, conta, etc.) ──
+// Diferente do Combo: NÃO permite criar item novo (a lista é fixa) e a validação
+// "obrigatório" recai sobre o id realmente escolhido — digitar texto que não casa
+// com nenhuma opção mantém o campo inválido até selecionar um item da lista.
+function ComboSelect({ idName, options, color, placeholder, required, defaultId }: {
+  idName: string; options: Opt[]; color: string; placeholder: string; required?: boolean; defaultId?: string
+}) {
+  const initial = defaultId ? options.find((o) => o.id === defaultId) : undefined
+  const [query, setQuery] = useState(initial?.name ?? "")
+  const [id, setId] = useState(initial?.id ?? "")
+  const [open, setOpen] = useState(false)
+  const [hi, setHi] = useState(0)
+  const box = useRef<HTMLDivElement>(null)
+  const field = useRef<HTMLInputElement>(null)
+
+  const tokens = norm(query).split(/\s+/).filter(Boolean)
+  const filtered = options
+    .filter((o) => { const n = norm(o.name); return tokens.every((t) => n.includes(t)) })
+    .slice(0, 50)
+
+  // "obrigatório" baseado no id selecionado (não no texto digitado)
+  useEffect(() => {
+    field.current?.setCustomValidity(required && !id ? "Selecione uma opção da lista." : "")
+  }, [id, required])
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener("mousedown", onDoc)
+    return () => document.removeEventListener("mousedown", onDoc)
+  }, [])
+
+  const pick = (o: Opt) => { setQuery(o.name); setId(o.id); setOpen(false) }
+
+  // ao sair do campo, se o texto bate exatamente com uma opção (ex.: digitou tudo
+  // e não clicou), resolve o id automaticamente; caso contrário deixa como está e a
+  // validação de "obrigatório" cobra a seleção de um item válido da lista.
+  const onBlur = () => {
+    if (!query.trim()) { setId(""); return }
+    const hit = options.find((o) => norm(o.name) === norm(query))
+    if (hit) { setQuery(hit.name); setId(hit.id) }
+  }
+
+  return (
+    <div ref={box} style={{ position: "relative" }}>
+      <input type="hidden" name={idName} value={id} />
+      <input
+        ref={field} autoComplete="off" value={query} placeholder={placeholder}
+        onChange={(e) => { setQuery(e.target.value); setId(""); setOpen(true); setHi(0) }}
+        onFocus={() => setOpen(true)}
+        onBlur={onBlur}
+        onKeyDown={(e) => {
+          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) { setOpen(true); return }
+          const max = filtered.length - 1
+          if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(max, h + 1)) }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(0, h - 1)) }
+          else if (e.key === "Enter") { if (open && filtered[hi]) { e.preventDefault(); pick(filtered[hi]) } }
+          else if (e.key === "Escape") setOpen(false)
+        }}
+        style={{ ...inp, paddingRight: "32px" }}
+      />
+      <span style={{ position: "absolute", right: "12px", top: "10px", color: "var(--text-muted)", pointerEvents: "none", fontSize: "11px" }}>▾</span>
+      {open && (
+        <div style={{
+          position: "absolute", zIndex: 30, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: "240px",
+          overflowY: "auto", background: "var(--bg-secondary)", border: "1px solid var(--border)",
+          borderRadius: "10px", boxShadow: "0 12px 28px rgba(0,0,0,0.35)", padding: "5px",
+        }}>
+          {filtered.map((o, i) => (
+            <button type="button" key={o.id} onMouseDown={(e) => { e.preventDefault(); pick(o) }} onMouseEnter={() => setHi(i)}
+              style={{
+                display: "block", width: "100%", textAlign: "left", padding: "9px 11px", borderRadius: "7px",
+                border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "13px",
+                background: i === hi ? `${color}1e` : "transparent", color: i === hi ? color : "var(--text-primary)",
+              }}>{o.name}</button>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ padding: "9px 11px", fontSize: "12.5px", color: "var(--text-muted)" }}>
+              {options.length === 0 ? "Nenhuma opção cadastrada." : "Nenhum resultado para sua busca."}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── máscaras e validações ────────────────────────────────────────────────────
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -471,7 +557,7 @@ export function FormReceita({ o, onSaved, onNew, onCancel }: { o: Options; onSav
           <select name="account_id" required style={inp}><option value="">Selecione...</option>{o.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
         </Field>
         <Field label="Categoria da Receita" req>
-          <select name="category_id" required style={inp}><option value="">Selecione...</option>{o.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <ComboSelect idName="category_id" options={o.categories} color="var(--success)" required placeholder="Buscar categoria..." />
         </Field>
         <Field label="Centro de Custo / Obra" req>
           <select name="cost_center_id" required style={inp}><option value="">Selecione...</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
@@ -550,7 +636,7 @@ export function FormDespesa({ o, onSaved, onNew, onCancel }: { o: Options; onSav
           <select name="account_id" required style={inp}><option value="">Selecione...</option>{o.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
         </Field>
         <Field label="Categoria da Despesa" req>
-          <select name="category_id" required style={inp}><option value="">Selecione...</option>{o.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <ComboSelect idName="category_id" options={o.categories} color="var(--danger)" required placeholder="Buscar categoria..." />
         </Field>
         <Field label="Centro de Custo / Departamento" req>
           <select name="cost_center_id" required style={inp}><option value="">Selecione...</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
