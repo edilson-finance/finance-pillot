@@ -12,7 +12,7 @@ export function Topbar() {
   const session = useSession()
   const router = useRouter()
   const { isMobile, setOpen } = useMobileNav()
-  const [theme, setTheme] = useState<"dark" | "light">("dark")
+  const [theme, setTheme] = useState<"dark" | "light">("light")
   const [companyOpen, setCompanyOpen] = useState(false)
   const [switching, startSwitch] = useTransition()
   const companyRef = useRef<HTMLDivElement>(null)
@@ -44,11 +44,11 @@ export function Topbar() {
   }
 
   useEffect(() => {
+    // Default claro: só fica escuro se o usuário salvou "dark" explicitamente.
     const saved = localStorage.getItem("fp-theme") as "dark" | "light" | null
-    if (saved) {
-      setTheme(saved)
-      document.documentElement.classList.toggle("light", saved === "light")
-    }
+    const initial = saved === "dark" ? "dark" : "light"
+    setTheme(initial)
+    document.documentElement.classList.toggle("light", initial === "light")
   }, [])
 
   function toggleTheme() {

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useTransition, useEffect } from "react"
-import { Zap, Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import { login } from "./actions"
 
 export default function LoginPage() {
@@ -52,20 +52,16 @@ export default function LoginPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            background: "var(--accent)",
-            borderRadius: "14px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-          }}>
-            <Zap size={22} color="#fff" strokeWidth={2.5} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/wiqfy-icon-tight.png"
+            alt="wiqfy"
+            width={56}
+            height={56}
+            style={{ display: "block", margin: "0 auto 16px", objectFit: "contain" }}
+          />
           <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
-            FinancePilot
+            wiqfy
           </h1>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Acesse sua conta

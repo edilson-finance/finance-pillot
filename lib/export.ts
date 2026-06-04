@@ -70,7 +70,7 @@ export function exportPdf<T>(
 </style></head><body>
 <header><h1>${esc(title)}</h1><div class="sub">${esc(subtitle)}</div></header>
 <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
-<footer>FinancePilot · Gerado em ${new Date().toLocaleString("pt-BR")}</footer>
+<footer>wiqfy · Gerado em ${new Date().toLocaleString("pt-BR")}</footer>
 <script>window.onload=function(){window.print()}</script>
 </body></html>`
 

@@ -224,7 +224,7 @@ export default function SettingsClient({ company }: { company: CompanySettings |
               <div style={{ marginBottom: "20px" }}>
                 <div style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "4px" }}>Perfil Econômico da Empresa</div>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  Essa configuração ajuda o FinancePilot a enxergar a realidade econômica da empresa e adaptar comunicação, relatórios, diagnósticos e referências financeiras aos princípios usados no Brasil e no mundo. O perfil escolhido fica salvo até você trocá-lo.
+                  Essa configuração ajuda a wiqfy a enxergar a realidade econômica da empresa e adaptar comunicação, relatórios, diagnósticos e referências financeiras aos princípios usados no Brasil e no mundo. O perfil escolhido fica salvo até você trocá-lo.
                 </div>
               </div>
 

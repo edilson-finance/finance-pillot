@@ -6,7 +6,7 @@ import { useEffect, useState } from "react"
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Wallet,
   BarChart3, TrendingUp, FileText, RefreshCw, Activity,
-  BrainCircuit, Bell, Settings, Users, Package, Zap, LogOut,
+  BrainCircuit, Bell, Settings, Users, Package, LogOut,
   AlertTriangle, ShieldCheck, Star, ChevronDown,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
@@ -246,19 +246,17 @@ export function Sidebar() {
         display: "flex", alignItems: "center", gap: "9px",
         flexShrink: 0,
       }}>
-        <div style={{
-          width: "30px", height: "30px",
-          background: "linear-gradient(135deg, var(--accent), var(--purple))",
-          borderRadius: "8px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(79,70,229,0.4)",
-        }}>
-          <Zap size={15} color="#fff" strokeWidth={2.5} />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/wiqfy-icon-tight.png"
+          alt="wiqfy"
+          width={30}
+          height={30}
+          style={{ flexShrink: 0, display: "block", objectFit: "contain" }}
+        />
         <div>
           <div style={{ fontSize: "14px", fontWeight: 800, letterSpacing: "-0.4px", color: "var(--text-primary)" }}>
-            FinancePilot
+            wiqfy
           </div>
           <div style={{ fontSize: "9px", color: "var(--text-muted)", letterSpacing: "0.8px", textTransform: "uppercase", marginTop: "1px" }}>
             Gestão Financeira

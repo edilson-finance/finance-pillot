@@ -25,18 +25,18 @@ Deno.serve(async (req) => {
     if (!key) return json({ sent: false, link, reason: "no_email_provider" })
 
     const roleLabel = role === "admin" ? "Administrador" : "Membro"
-    const company = companyName || "FinancePilot"
+    const company = companyName || "wiqfy"
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: Deno.env.get("INVITE_FROM") ?? "FinancePilot <onboarding@resend.dev>",
+        from: Deno.env.get("INVITE_FROM") ?? "wiqfy <onboarding@resend.dev>",
         to: [email],
         subject: `Você foi convidado para ${company}`,
         html: `
           <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
             <h2>Convite para ${company}</h2>
-            <p>Você foi convidado para acessar o FinancePilot como <b>${roleLabel}</b>.</p>
+            <p>Você foi convidado para acessar a wiqfy como <b>${roleLabel}</b>.</p>
             <p><a href="${link}" style="display:inline-block;padding:10px 18px;background:#4F46E5;color:#fff;border-radius:8px;text-decoration:none">Criar minha conta</a></p>
             <p style="color:#888;font-size:12px">Ou copie este link: ${link}</p>
           </div>`,
