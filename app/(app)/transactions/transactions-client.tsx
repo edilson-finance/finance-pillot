@@ -473,8 +473,8 @@ function FormReceita({ o, onSaved, onNew }: { o: Options; onSaved: () => void; o
         <Field label="Categoria da Receita" req>
           <select name="category_id" required style={inp}><option value="">Selecione...</option>{o.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </Field>
-        <Field label="Centro de Custo / Obra">
-          <select name="cost_center_id" style={inp}><option value="">Nenhum</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <Field label="Centro de Custo / Obra" req>
+          <select name="cost_center_id" required style={inp}><option value="">Selecione...</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </Field>
       </div>
 
@@ -552,8 +552,8 @@ function FormDespesa({ o, onSaved, onNew }: { o: Options; onSaved: () => void; o
         <Field label="Categoria da Despesa" req>
           <select name="category_id" required style={inp}><option value="">Selecione...</option>{o.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </Field>
-        <Field label="Centro de Custo / Departamento">
-          <select name="cost_center_id" style={inp}><option value="">Nenhum</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <Field label="Centro de Custo / Departamento" req>
+          <select name="cost_center_id" required style={inp}><option value="">Selecione...</option>{o.costCenters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </Field>
       </div>
 

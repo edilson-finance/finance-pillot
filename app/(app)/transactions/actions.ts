@@ -117,6 +117,7 @@ export async function createReceita(fd: FormData): Promise<Result> {
   if (!(amount > 0)) return { error: "Valor é obrigatório" }
   if (!due_date) return { error: "Data de vencimento é obrigatória" }
   if (!description) return { error: "Descrição é obrigatória" }
+  if (!nstr(fd, "cost_center_id")) return { error: "Centro de custo é obrigatório" }
 
   const customer_id = await ensureParty(
     supabase, "customers", nstr(fd, "customer_id"), nstr(fd, "customer_name"),
@@ -210,6 +211,7 @@ export async function createDespesa(fd: FormData): Promise<Result> {
   if (!(amount > 0)) return { error: "Valor é obrigatório" }
   if (!due_date) return { error: "Data de vencimento é obrigatória" }
   if (!description) return { error: "Descrição é obrigatória" }
+  if (!nstr(fd, "cost_center_id")) return { error: "Centro de custo é obrigatório" }
 
   const supplier_id = await ensureParty(
     supabase, "suppliers", nstr(fd, "supplier_id"), nstr(fd, "supplier_name"),
