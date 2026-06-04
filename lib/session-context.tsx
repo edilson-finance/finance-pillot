@@ -4,12 +4,22 @@ import { createContext, useContext, ReactNode } from "react"
 
 export type UserRole = "super_admin" | "admin" | "member"
 
+export interface CompanyMembership {
+  id: string
+  name: string
+  role: UserRole
+}
+
 export interface SessionInfo {
   userId: string
   name: string
   email: string
   role: UserRole
+  // Empresa ativa (profiles.company_id).
+  companyId: string | null
   companyName: string
+  // Empresas das quais o usuário participa (para o seletor de empresa).
+  companies: CompanyMembership[]
   // Module keys the current user is allowed to open. Admins/super_admins get all.
   allowedModules: string[]
 }

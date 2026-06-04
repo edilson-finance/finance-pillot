@@ -60,6 +60,22 @@ Deno.serve(async (req) => {
       return json({ created: false, error: profErr.message }, 400)
     }
 
+    // Passo 4 — registrar a participação na empresa (fonte de verdade do
+    // multi-empresa). Sem company_id, o usuário fica sem participação ativa.
+    if (company_id) {
+      const { error: memberErr } = await admin.from("company_members").insert({
+        company_id,
+        user_id: userId,
+        role: finalRole,
+      })
+      if (memberErr) {
+        // rollback: remove profile + auth user para não deixar estado parcial.
+        await admin.from("profiles").delete().eq("id", userId)
+        await admin.auth.admin.deleteUser(userId)
+        return json({ created: false, error: memberErr.message }, 400)
+      }
+    }
+
     return json({ created: true, user_id: userId })
   } catch (e) {
     return json({ created: false, error: String(e) }, 400)

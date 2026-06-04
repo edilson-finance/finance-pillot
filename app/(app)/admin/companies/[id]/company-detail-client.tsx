@@ -22,6 +22,7 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
   const [pending, start] = useTransition()
   const [showCreate, setShowCreate] = useState(false)
   const [linkUserId, setLinkUserId] = useState("")
+  const [linkRole, setLinkRole] = useState("member")
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(detail.name)
 
@@ -59,9 +60,9 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
     if (!linkUserId) return
     setError(null); setMsg(null)
     start(async () => {
-      const res = await setUserCompany(linkUserId, detail.id, "member")
+      const res = await setUserCompany(linkUserId, detail.id, linkRole)
       if (res.error) { setError(res.error); return }
-      setMsg("Usuário vinculado."); setLinkUserId(""); router.refresh()
+      setMsg("Participação adicionada à empresa."); setLinkUserId(""); setLinkRole("member"); router.refresh()
     })
   }
 
@@ -152,17 +153,24 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
           </form>
         )}
 
-        <div style={{ display: "flex", gap: "8px", padding: "12px 16px", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", padding: "12px 16px", borderBottom: "1px solid var(--border)", alignItems: "center" }}>
           <select value={linkUserId} onChange={(e) => setLinkUserId(e.target.value)} style={{ ...inputStyle, maxWidth: "320px" }}>
-            <option value="">Vincular usuário existente…</option>
+            <option value="">Adicionar usuário existente a esta empresa…</option>
             {linkable.map((u) => (
               <option key={u.id} value={u.id}>{u.email} {u.company_name ? `(${u.company_name})` : "(sem empresa)"}</option>
             ))}
           </select>
+          <select value={linkRole} onChange={(e) => setLinkRole(e.target.value)} style={{ ...inputStyle, maxWidth: "160px" }}>
+            <option value="member">Membro</option>
+            <option value="admin">Administrador</option>
+          </select>
           <button onClick={onLink} disabled={!linkUserId || pending} style={{
             background: "var(--bg-tertiary)", color: "var(--text-primary)", border: "1px solid var(--border)",
             padding: "8px 12px", borderRadius: "7px", fontSize: "12px", cursor: linkUserId ? "pointer" : "default",
-          }}>Vincular</button>
+          }}>Adicionar participação</button>
+          <span style={{ fontSize: "10.5px", color: "var(--text-muted)", flexBasis: "100%" }}>
+            O usuário pode participar de várias empresas. Isto adiciona a participação sem remover as demais.
+          </span>
         </div>
 
         <table style={{ width: "100%", borderCollapse: "collapse" }}>

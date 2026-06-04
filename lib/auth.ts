@@ -18,12 +18,13 @@ export async function getSessionProfile() {
 export async function getSessionContext(): Promise<SessionInfo> {
   const { user, profile } = await getSessionProfile()
   const role = profile.role as SessionInfo["role"]
+  const supabase = await createClient()
 
   let allowedModules: string[]
   if (role === "admin" || role === "super_admin") {
     allowedModules = MODULES.map((m) => m.key)
   } else {
-    const supabase = await createClient()
+    // RLS já escopa member_permissions à empresa ativa do chamador.
     const { data } = await supabase
       .from("member_permissions")
       .select("module")
@@ -32,12 +33,28 @@ export async function getSessionContext(): Promise<SessionInfo> {
     allowedModules = (data ?? []).map((r) => r.module as string)
   }
 
+  // Empresas das quais o usuário participa (fonte: company_members).
+  const { data: memberships } = await supabase
+    .from("company_members")
+    .select("role, companies(id, name)")
+    .eq("user_id", user.id)
+  const companies = (memberships ?? [])
+    .map((m) => {
+      const c = m.companies as unknown as { id: string; name: string } | null
+      if (!c) return null
+      return { id: c.id, name: c.name, role: m.role as SessionInfo["role"] }
+    })
+    .filter((c): c is SessionInfo["companies"][number] => c !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+
   return {
     userId: user.id,
     name: profile.name || (user.email ?? "").split("@")[0],
     email: user.email ?? "",
     role,
+    companyId: profile.company_id ?? null,
     companyName: profile.companies?.name ?? "Minha Empresa",
+    companies,
     allowedModules,
   }
 }
