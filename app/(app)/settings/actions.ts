@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -107,12 +108,17 @@ export async function uploadCompanyLogo(
   const ext = file.name.split(".").pop()?.toLowerCase() || "png"
   const path = `${id}/logo-${Date.now()}.${ext}`
 
-  const { error: upErr } = await supabase.storage
+  // O upload roda com a chave service role: a RLS do Storage rejeita o token do
+  // usuário mesmo com policy permissiva (ver lib/supabase/admin.ts). O caminho é
+  // fixado em `${id}/...`, a pasta da empresa do usuário autenticado, então não
+  // há como gravar fora do escopo dele.
+  const admin = createAdminClient()
+  const { error: upErr } = await admin.storage
     .from("company-logos")
     .upload(path, file, { upsert: true, contentType: file.type })
   if (upErr) return { ok: false, error: upErr.message }
 
-  const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path)
+  const { data: pub } = admin.storage.from("company-logos").getPublicUrl(path)
   const url = pub.publicUrl
 
   const { error } = await supabase.from("companies").update({ logo_url: url }).eq("id", id)
@@ -128,10 +134,12 @@ export async function removeCompanyLogo(): Promise<Result> {
   const id = await companyId(supabase)
   if (!id) return { ok: false, error: "Empresa não identificada." }
 
-  // Remove os arquivos da pasta da empresa (best-effort).
-  const { data: files } = await supabase.storage.from("company-logos").list(id)
+  // Remove os arquivos da pasta da empresa (best-effort) com a chave service
+  // role — a RLS do Storage rejeita o token do usuário (ver admin.ts).
+  const admin = createAdminClient()
+  const { data: files } = await admin.storage.from("company-logos").list(id)
   if (files?.length) {
-    await supabase.storage.from("company-logos").remove(files.map((f) => `${id}/${f.name}`))
+    await admin.storage.from("company-logos").remove(files.map((f) => `${id}/${f.name}`))
   }
 
   const { error } = await supabase.from("companies").update({ logo_url: null }).eq("id", id)
