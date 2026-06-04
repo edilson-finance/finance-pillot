@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 type Result = { ok: boolean; error?: string }
 
@@ -15,8 +16,11 @@ function revalidate() {
   revalidatePath("/", "layout")
 }
 
-async function companyId(): Promise<string | null> {
-  const supabase = await createClient()
+// Resolve o company_id reutilizando o MESMO client da operação. Usar um client
+// por request evita a corrida de refresh de token do @supabase/ssr (duas
+// instâncias tentando rotacionar o refresh token), que fazia o upload de logo
+// chegar ao Storage como anônimo e violar a RLS.
+async function companyId(supabase: SupabaseClient): Promise<string | null> {
   const { data } = await supabase.from("profiles").select("company_id").single()
   return data?.company_id ?? null
 }
@@ -47,7 +51,10 @@ const TEXT_FIELDS: (keyof CompanyInput)[] = [
 ]
 
 export async function updateCompany(input: CompanyInput): Promise<Result> {
-  const id = await companyId()
+  const supabase = await createClient()
+  // Hidrata/rotaciona a sessão uma única vez antes de qualquer query.
+  await supabase.auth.getUser()
+  const id = await companyId(supabase)
   if (!id) return { ok: false, error: "Empresa não identificada." }
 
   const patch: Record<string, unknown> = {}
@@ -72,7 +79,6 @@ export async function updateCompany(input: CompanyInput): Promise<Result> {
 
   if (Object.keys(patch).length === 0) return { ok: true }
 
-  const supabase = await createClient()
   const { error } = await supabase.from("companies").update(patch).eq("id", id)
   if (error) return { ok: false, error: error.message }
   revalidate()
@@ -82,7 +88,9 @@ export async function updateCompany(input: CompanyInput): Promise<Result> {
 export async function uploadCompanyLogo(
   formData: FormData,
 ): Promise<Result & { url?: string }> {
-  const id = await companyId()
+  const supabase = await createClient()
+  await supabase.auth.getUser()
+  const id = await companyId(supabase)
   if (!id) return { ok: false, error: "Empresa não identificada." }
 
   const file = formData.get("file")
@@ -99,7 +107,6 @@ export async function uploadCompanyLogo(
   const ext = file.name.split(".").pop()?.toLowerCase() || "png"
   const path = `${id}/logo-${Date.now()}.${ext}`
 
-  const supabase = await createClient()
   const { error: upErr } = await supabase.storage
     .from("company-logos")
     .upload(path, file, { upsert: true, contentType: file.type })
@@ -116,10 +123,10 @@ export async function uploadCompanyLogo(
 }
 
 export async function removeCompanyLogo(): Promise<Result> {
-  const id = await companyId()
-  if (!id) return { ok: false, error: "Empresa não identificada." }
-
   const supabase = await createClient()
+  await supabase.auth.getUser()
+  const id = await companyId(supabase)
+  if (!id) return { ok: false, error: "Empresa não identificada." }
 
   // Remove os arquivos da pasta da empresa (best-effort).
   const { data: files } = await supabase.storage.from("company-logos").list(id)
