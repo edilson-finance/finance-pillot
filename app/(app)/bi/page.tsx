@@ -7,10 +7,11 @@ import {
   PieChart, Pie, Cell, ReferenceLine, ScatterChart, Scatter,
 } from "recharts"
 import { Download, TrendingUp, TrendingDown, Info, Plus, X, Check } from "lucide-react"
-import { topClients, topExpenses } from "@/lib/mock-data"
+import { useTopClients, useTopExpenses } from "@/lib/analytics-client"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
-import { generateRevenueSeries, generateKpis, daysBetween } from "@/lib/filtered-mock"
+import { useRevenueSeries, useKpis } from "@/lib/analytics-client"
+import { daysBetween } from "@/lib/filtered-mock"
 import { gastoPorCategoria, receitaPorCategoria, GRUPOS_DRE } from "@/lib/accounts-plan"
 
 const R = formatCurrency
@@ -396,8 +397,10 @@ export default function BiPage() {
   const { range } = useDateRange()
 
   /* ── Dados filtrados pelo período selecionado ── */
-  const series   = generateRevenueSeries(range)
-  const kpis     = generateKpis(range)
+  const { series } = useRevenueSeries(range)
+  const { kpis }   = useKpis(range)
+  const { rows: topClients }  = useTopClients()
+  const { rows: topExpenses } = useTopExpenses()
   const days     = daysBetween(range.start, range.end)
 
   const totalReceita  = series.reduce((s,d) => s + d.receita, 0)

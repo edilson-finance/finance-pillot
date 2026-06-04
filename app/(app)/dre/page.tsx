@@ -4,6 +4,7 @@ import { useState, useMemo } from "react"
 import { ChevronRight, Download, Settings2, Eye, EyeOff, TrendingUp, TrendingDown, BookOpen, BarChart2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
+import { useDre } from "@/lib/analytics-client"
 import Link from "next/link"
 
 const R = formatCurrency
@@ -166,10 +167,10 @@ function DreRowComp({ row, depth=0, visible }: { row:DreRow; depth?:number; visi
           {row.pct!==0 ? `${row.pct>0?"+":""}${row.pct.toFixed(1)}%` : "—"}
         </td>
         <td style={{ padding:"11px 14px", textAlign:"right", fontSize:"12px", color:"var(--text-muted)" }}>
-          {row.valor!==0 ? R(Math.round(row.valor*0.915)) : "—"}
+          —
         </td>
-        <td style={{ padding:"11px 14px", textAlign:"right", fontSize:"12px", color:"var(--success)" }}>
-          {row.valor!==0 ? "+8,5%" : "—"}
+        <td style={{ padding:"11px 14px", textAlign:"right", fontSize:"12px", color:"var(--text-muted)" }}>
+          —
         </td>
       </tr>
       {open && row.filhos?.map(f=><DreRowComp key={f.id} row={f} depth={depth+1} visible={visible}/>)}
@@ -194,28 +195,44 @@ export default function DrePage() {
     })
   }
 
+  const { dre } = useDre(range)
+
+  const dreNodes: DreRow[] = useMemo(() => dre.map((n, i) => ({
+    id: n.id ?? `n${i}`,
+    label: n.label,
+    tipo: n.tipo,
+    valor: Number(n.valor ?? 0),
+    pct: Number(n.percent ?? 0),
+    filhos: (n.filhos ?? []).map((f, j) => ({
+      id: `${n.id ?? i}-${j}`,
+      label: f.label,
+      valor: Number(f.valor ?? 0),
+      pct: Number((f as any).percent ?? 0),
+    })),
+  })), [dre])
+
   const visibleIds = useMemo(() => {
     const ids = new Set<string>()
-    SECOES.forEach(s => {
-      if (secaoFilter.has(s.key)) s.ids.forEach(id => ids.add(id))
-    })
-    // Sempre adicionar todos os ids filhos de contas visíveis
-    DRE_ESTRUTURA.forEach(r => {
-      if (ids.has(r.id)) r.filhos?.forEach(f => ids.add(f.id))
-    })
+    dreNodes.forEach(r => { ids.add(r.id); r.filhos?.forEach(f => ids.add(f.id)) })
     return ids
-  }, [secaoFilter])
+  }, [dreNodes])
 
   const data = useMemo(() => {
-    if (showOnlyResults) return DRE_ESTRUTURA.filter(r => ["resultado","destaque","lucro"].includes(r.tipo))
-    return DRE_ESTRUTURA
-  }, [showOnlyResults])
+    if (showOnlyResults) return dreNodes.filter(r => ["resultado","destaque","lucro"].includes(r.tipo ?? ""))
+    return dreNodes
+  }, [showOnlyResults, dreNodes])
 
+  const byId = useMemo(() => Object.fromEntries(dreNodes.map(n => [n.id, n])), [dreNodes])
+  const rbV = byId["receita_bruta"]?.valor ?? 0
+  const rlV = byId["receita_liquida"]?.valor ?? 0
+  const cdV = byId["custos_despesas"]?.valor ?? 0
+  const llV = byId["lucro_liquido"]?.valor ?? 0
+  const pctOf = (v: number) => (rbV > 0 ? `${((v / rbV) * 100).toFixed(1)}%` : "—")
   const keyKpis = [
-    { l:"Receita Bruta",        v:R(312000), pct:"100%",  c:"var(--success)" },
-    { l:"Lucro Bruto",          v:R(117104), pct:"37,5%", c:"var(--success)" },
-    { l:"EBITDA",               v:R(61404),  pct:"19,7%", c:"var(--accent)" },
-    { l:"Lucro Líquido",        v:R(18400),  pct:"5,9%",  c:"var(--warning)" },
+    { l:"Receita Bruta",     v:R(rbV), pct:pctOf(rbV), c:"var(--success)" },
+    { l:"Receita Líquida",   v:R(rlV), pct:pctOf(rlV), c:"var(--success)" },
+    { l:"Custos e Despesas", v:R(cdV), pct:pctOf(cdV), c:"var(--danger)" },
+    { l:"Lucro Líquido",     v:R(llV), pct:pctOf(llV), c: llV>=0?"var(--success)":"var(--warning)" },
   ]
 
   return (

@@ -7,8 +7,9 @@ import {
 import { TrendingUp, TrendingDown, AlertCircle, AlertTriangle, Info, Minus } from "lucide-react"
 import Link from "next/link"
 import { useDateRange } from "@/lib/date-context"
-import { generateKpis, generateRevenueSeries, daysBetween } from "@/lib/filtered-mock"
-import { topClients, alerts, healthDimensions, cashflowProjection } from "@/lib/mock-data"
+import { daysBetween } from "@/lib/filtered-mock"
+import { alerts, cashflowProjection } from "@/lib/mock-data"
+import { useKpis, useRevenueSeries, useTopClients, useHealthDimensions } from "@/lib/analytics-client"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -100,10 +101,12 @@ const cashOutDrivers = [
 
 export default function DashboardPage() {
   const { range } = useDateRange()
-  const kpis   = generateKpis(range)
-  const series = generateRevenueSeries(range)
+  const { kpis } = useKpis(range)
+  const { series } = useRevenueSeries(range)
+  const { rows: topClients } = useTopClients()
+  const { dims: healthDimensions } = useHealthDimensions()
   const days   = daysBetween(range.start, range.end)
-  const healthScore = parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1))
+  const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
   const liquidoSeries = series.map(d => ({ ...d, liquido: d.receita - d.despesa }))
 
   return (

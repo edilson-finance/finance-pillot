@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, Alert
 import { cashflowTransactions, cashflowProjection, revenueExpenseData, payables, receivables } from "@/lib/mock-data"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
+import { useCashflow } from "@/lib/analytics-client"
 import Link from "next/link"
 
 const R = formatCurrency
@@ -804,12 +805,24 @@ function ProjecaoForm() {
 export default function CashflowPage() {
   const [tab, setTab] = useState(0)
   const { range } = useDateRange()
+  const { rows: cfRows } = useCashflow(range)
 
-  const totalEntradas = cashflowTransactions.filter(t=>t.entrada).reduce((s,t)=>s+(t.entrada||0),0)
-  const totalSaidas   = cashflowTransactions.filter(t=>t.saida).reduce((s,t)=>s+(t.saida||0),0)
-  const saldoInicial  = 295400
-  const saldoFinal    = saldoInicial + totalEntradas - totalSaidas
-  const menorSaldo    = 162400
+  const realGrouped = useMemo(() => {
+    const g: Record<string, typeof cashflowTransactions> = {}
+    for (const t of cfRows) {
+      const row = { data: t.data, descricao: t.descricao, categoria: t.categoria, conta: "—", entrada: t.entrada || null, saida: t.saida || null, saldo: t.saldo }
+      ;(g[t.data] ||= [] as any).push(row as any)
+    }
+    return g
+  }, [cfRows])
+
+  const totalEntradas = cfRows.reduce((s,t)=>s+t.entrada,0)
+  const totalSaidas   = cfRows.reduce((s,t)=>s+t.saida,0)
+  const saldoFinal    = cfRows.length ? cfRows[0].saldo : 0
+  const saldoInicial  = saldoFinal - totalEntradas + totalSaidas
+  const entradaCount  = cfRows.filter(t=>t.entrada>0).length
+  const saidaCount    = cfRows.filter(t=>t.saida>0).length
+  const menorSaldo    = cfRows.length ? Math.min(...cfRows.map(t=>t.saldo)) : 0
 
   return (
     <div style={{ padding:"22px" }}>
@@ -847,11 +860,11 @@ export default function CashflowPage() {
       {/* Summary cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"10px", marginBottom:"16px" }}>
         {[
-          { l:"Saldo Inicial",    v:R(saldoInicial), sub:"01/05/2026",        c:"var(--text-primary)" },
-          { l:"Total Entradas",   v:R(totalEntradas), sub:`${cashflowTransactions.filter(t=>t.entrada).length} lançamentos`, c:"var(--success)" },
-          { l:"Total Saídas",     v:R(totalSaidas),   sub:`${cashflowTransactions.filter(t=>t.saida).length} lançamentos`,  c:"var(--danger)" },
+          { l:"Saldo Inicial",    v:R(saldoInicial), sub:"Início do período",        c:"var(--text-primary)" },
+          { l:"Total Entradas",   v:R(totalEntradas), sub:`${entradaCount} lançamentos`, c:"var(--success)" },
+          { l:"Total Saídas",     v:R(totalSaidas),   sub:`${saidaCount} lançamentos`,  c:"var(--danger)" },
           { l:"Saldo Final",      v:R(saldoFinal),    sub:"Até hoje",          c:"var(--accent)" },
-          { l:"Menor Projetado",  v:R(menorSaldo),    sub:"Semana 24/06",      c:"var(--warning)" },
+          { l:"Menor Saldo",      v:R(menorSaldo),    sub:"No período",      c:"var(--warning)" },
         ].map(c=>(
           <div key={c.l} style={{ background:"var(--bg-secondary)", border:`1px solid ${c.c}28`, borderLeft:`3px solid ${c.c}`, borderRadius:"var(--radius)", padding:"12px 14px" }}>
             <div style={{ fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:"6px" }}>{c.l}</div>
@@ -889,7 +902,7 @@ export default function CashflowPage() {
               <div key={h} style={{ fontSize:"10px",color:"var(--text-muted)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.5px",textAlign:["Entrada","Saída","Saldo"].includes(h)?"right":"left" }}>{h}</div>
             ))}
           </div>
-          {Object.entries(grouped).sort(([a],[b])=>b.localeCompare(a)).map(([date,rows])=>(
+          {Object.entries(realGrouped).sort(([a],[b])=>b.localeCompare(a)).map(([date,rows])=>(
             <DayGroup key={date} date={date} rows={rows}/>
           ))}
           {/* Totals footer */}

@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from "recharts"
-import { healthDimensions } from "@/lib/mock-data"
-import { generateKpis } from "@/lib/filtered-mock"
+import { useKpis, useHealthDimensions } from "@/lib/analytics-client"
 import { useDateRange } from "@/lib/date-context"
 import { Edit2, Check, X, RotateCcw, Info } from "lucide-react"
 
@@ -49,7 +48,8 @@ function ScoreCircle({ score, config }: { score: number; config: any }) {
 
 export default function HealthPage() {
   const { range } = useDateRange()
-  const kpis = generateKpis(range)
+  const { kpis } = useKpis(range)
+  const { dims: healthDimensions } = useHealthDimensions()
   const [editMode, setEditMode] = useState(false)
   const [metas, setMetas] = useState<Record<string,{bom:number;atencao:number;risco:number}>>(() =>
     Object.fromEntries(Object.entries(MARKET_DEFAULTS).map(([k,v])=>[k,{bom:v.bom,atencao:v.atencao,risco:v.risco}]))
@@ -61,7 +61,7 @@ export default function HealthPage() {
     setUseMarket(true)
   }
 
-  const healthScore = parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1))
+  const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
 
   let scoreConf = statusConfig.saudavel
   if (healthScore < 4) scoreConf = statusConfig.critico
