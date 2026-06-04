@@ -112,12 +112,18 @@ export default function ReconciliationPage() {
   }
 
   // Resumo (conta apenas linhas ainda visíveis / não ignoradas).
+  // Cada linha entra em UMA única categoria para o total nunca ficar negativo:
+  // conciliada (confirmada/criada) tem prioridade; depois "sem correspondência"
+  // (nível "nenhum" ainda não tratado); o restante é "para revisar".
   const visible = matches.filter((m) => rows[m.ofx.fitid]?.status !== "ignored")
   const confirmados = visible.filter((m) => {
     const s = rows[m.ofx.fitid]?.status
     return s === "confirmed" || s === "already"
   }).length
-  const semCorr = visible.filter((m) => m.level === "nenhum").length
+  const semCorr = visible.filter((m) => {
+    const s = rows[m.ofx.fitid]?.status
+    return m.level === "nenhum" && s !== "confirmed" && s !== "already"
+  }).length
   const revisar = visible.length - confirmados - semCorr
 
   return (

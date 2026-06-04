@@ -34,6 +34,20 @@ function daysOverdue(due: string): number {
   return Math.max(0, Math.round((today.getTime() - d.getTime()) / 86400000))
 }
 
+/* ── Status "em atraso" derivado do vencimento ──
+   O banco não vira a_receber→em_atraso sozinho. Derivamos aqui para que
+   filtros, KPIs e badges reflitam a inadimplência real pela data. */
+function isReceivableOverdue(due_date: string, status: string): boolean {
+  if (status === "recebido") return false
+  if (status === "em_atraso") return true
+  return daysOverdue(due_date) > 0
+}
+
+function effReceivableStatus(due_date: string, status: string): "a_receber" | "em_atraso" | "recebido" {
+  if (status === "recebido") return "recebido"
+  return isReceivableOverdue(due_date, status) ? "em_atraso" : "a_receber"
+}
+
 export default function ReceivablesClient({ receivables, customers, categories, accounts, costCenters, suppliers, products }: {
   receivables: Receivable[]
   customers: Opt[]
@@ -56,15 +70,21 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   const o: Options = { categories, accounts, costCenters, customers, suppliers, products }
 
   const filtered = receivables
-    .filter(r => filter === "todos" || r.status === filter)
+    .filter(r => {
+      if (filter === "todos") return true
+      if (filter === "recebido") return r.status === "recebido"
+      if (filter === "em_atraso") return isReceivableOverdue(r.due_date, r.status)
+      if (filter === "a_receber") return r.status !== "recebido" && !isReceivableOverdue(r.due_date, r.status)
+      return true
+    })
     .filter(r => !q || (r.customer?.name ?? "").toLowerCase().includes(q.toLowerCase()))
 
   const totals = {
-    aReceber: receivables.filter(r => r.status === "a_receber").reduce((s, r) => s + r.amount, 0),
-    atraso:   receivables.filter(r => r.status === "em_atraso").reduce((s, r) => s + r.amount, 0),
+    aReceber: receivables.filter(r => r.status !== "recebido" && !isReceivableOverdue(r.due_date, r.status)).reduce((s, r) => s + r.amount, 0),
+    atraso:   receivables.filter(r => isReceivableOverdue(r.due_date, r.status)).reduce((s, r) => s + r.amount, 0),
     recebido: receivables.filter(r => r.status === "recebido").reduce((s, r) => s + r.amount, 0),
   }
-  const emAtrasoCount = receivables.filter(r => r.status === "em_atraso").length
+  const emAtrasoCount = receivables.filter(r => isReceivableOverdue(r.due_date, r.status)).length
 
   function openNew() { setShowNew(true); setNewKey((k) => k + 1) }
   function openEdit(r: Receivable) { setEditing(r); setError(null); setShowForm(true) }
@@ -216,7 +236,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
             {filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ padding:"40px",textAlign:"center",color:"var(--text-muted)",fontSize:"13px" }}>Nenhuma cobrança encontrada</td></tr>
             ) : filtered.map((item,i)=>{
-              const sc = stCfg[item.status] ?? { label:item.status, c:"var(--text-muted)", bg:"var(--bg-tertiary)" }
+              const sc = stCfg[effReceivableStatus(item.due_date, item.status)] ?? { label:item.status, c:"var(--text-muted)", bg:"var(--bg-tertiary)" }
               const dias = item.status === "recebido" ? 0 : daysOverdue(item.due_date)
               return (
                 <tr key={item.id} style={{ borderBottom:i<filtered.length-1?"1px solid var(--border)":"none" }}

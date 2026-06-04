@@ -38,6 +38,23 @@ function getDueStatus(vencimento: string, status: string): { label: string; rowB
   return                  { label:`${days}d`,    rowBg:"transparent",            dateColor:"var(--success)", icon:null,        badge:{bg:"var(--success-soft)", c:"var(--success)"} }
 }
 
+/* ── Status "vencido" derivado do vencimento ──
+   O banco não vira a_pagar→em_atraso sozinho, então uma conta a vencer
+   pode estar vencida sem o status refletir isso. Derivamos aqui para que
+   filtros, cards e badges fiquem 100% coerentes com a coloração da linha. */
+function isPayableOverdue(due_date: string, status: string): boolean {
+  if (status === "pago") return false
+  if (status === "em_atraso") return true
+  const today = new Date(); today.setHours(0,0,0,0)
+  const due = new Date(due_date)
+  return Math.round((due.getTime() - today.getTime()) / 86400000) < 0
+}
+
+function effPayableStatus(due_date: string, status: string): "a_pagar" | "em_atraso" | "pago" {
+  if (status === "pago") return "pago"
+  return isPayableOverdue(due_date, status) ? "em_atraso" : "a_pagar"
+}
+
 export default function PayablesClient({ payables, suppliers, categories, accounts, costCenters, products }: {
   payables: Payable[]
   suppliers: Opt[]
@@ -92,12 +109,18 @@ export default function PayablesClient({ payables, suppliers, categories, accoun
   }
 
   const filtered = payables
-    .filter(p => filter === "todos" || p.status === filter)
+    .filter(p => {
+      if (filter === "todos") return true
+      if (filter === "pago") return p.status === "pago"
+      if (filter === "em_atraso") return isPayableOverdue(p.due_date, p.status)
+      if (filter === "a_pagar") return p.status !== "pago" && !isPayableOverdue(p.due_date, p.status)
+      return true
+    })
     .filter(p => !q || (p.supplier?.name ?? "").toLowerCase().includes(q.toLowerCase()) || (p.description ?? "").toLowerCase().includes(q.toLowerCase()))
 
   const totals = {
     aPagar:   payables.filter(p=>p.status!=="pago").reduce((s,p)=>s+p.amount,0),
-    vencidos: payables.filter(p=>p.status==="em_atraso").reduce((s,p)=>s+p.amount,0),
+    vencidos: payables.filter(p=>isPayableOverdue(p.due_date,p.status)).reduce((s,p)=>s+p.amount,0),
     pagos:    payables.filter(p=>p.status==="pago").reduce((s,p)=>s+p.amount,0),
   }
 
@@ -267,7 +290,7 @@ export default function PayablesClient({ payables, suppliers, categories, accoun
                   </td>
                   <td style={{ padding:"11px 14px" }}>
                     <span style={{ fontSize:"11px",fontWeight:700,color:ds.badge.c,background:ds.badge.bg,padding:"3px 9px",borderRadius:"20px" }}>
-                      {item.status==="a_pagar"?"A Pagar":item.status==="em_atraso"?"Em Atraso":item.status==="pago"?"Pago":"—"}
+                      {(() => { const e = effPayableStatus(item.due_date, item.status); return e==="a_pagar"?"A Pagar":e==="em_atraso"?"Em Atraso":"Pago" })()}
                     </span>
                     {item.status==="pago" && item.paid_at && (
                       <div style={{ fontSize:"9px",color:"var(--text-muted)",marginTop:"2px" }}>
