@@ -5,12 +5,13 @@ import { CompanyProvider } from "@/lib/company-context"
 import { SessionProvider } from "@/lib/session-context"
 import { MobileNavProvider } from "@/lib/mobile-nav"
 import { getSessionContext } from "@/lib/auth"
+import { getCompanySettings } from "@/lib/db/company"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSessionContext()
+  const [session, company] = await Promise.all([getSessionContext(), getCompanySettings()])
   return (
     <SessionProvider value={session}>
-    <CompanyProvider>
+    <CompanyProvider initialType={company?.type} initialLogoUrl={company?.logo_url} initialName={company?.name}>
     <DateRangeProvider>
     <MobileNavProvider>
       <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg-primary)" }}>

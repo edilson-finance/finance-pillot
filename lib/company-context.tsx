@@ -148,38 +148,39 @@ interface CompanyCtx {
 
 const Ctx = createContext<CompanyCtx | null>(null)
 
-export function CompanyProvider({ children }: { children: ReactNode }) {
-  const [companyType, setCompanyTypeState] = useState<CompanyType>("construcao")
-  const [logoUrl, setLogoUrlState] = useState<string | null>(null)
-  const [companyName, setCompanyNameState] = useState("Minha Empresa")
+export function CompanyProvider({
+  children,
+  initialType,
+  initialLogoUrl,
+  initialName,
+}: {
+  children: ReactNode
+  initialType?: string | null
+  initialLogoUrl?: string | null
+  initialName?: string | null
+}) {
+  // Fonte de verdade: o banco (valores iniciais vêm do servidor via props).
+  // Os setters apenas atualizam o estado local para refletir a mudança na hora;
+  // a persistência é feita pelas server actions da tela de Configurações.
+  const [companyType, setCompanyTypeState] = useState<CompanyType>(normalizeCompanyType(initialType ?? null))
+  const [logoUrl, setLogoUrlState] = useState<string | null>(initialLogoUrl ?? null)
+  const [companyName, setCompanyNameState] = useState(initialName?.trim() || "Minha Empresa")
 
-  useEffect(() => {
-    const t = normalizeCompanyType(window.localStorage.getItem("fp-company-type"))
-    const l = window.localStorage.getItem("fp-logo-url")
-    const n = window.localStorage.getItem("fp-company-name")
-    window.localStorage.setItem("fp-company-type", t)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCompanyTypeState(t)
-    if (l) setLogoUrlState(l)
-    if (n) setCompanyNameState(n)
-  }, [])
-
-  function setCompanyType(t: CompanyType) {
-    setCompanyTypeState(t)
-    localStorage.setItem("fp-company-type", t)
-  }
-  function setLogoUrl(url: string | null) {
-    setLogoUrlState(url)
-    if (url) localStorage.setItem("fp-logo-url", url)
-    else localStorage.removeItem("fp-logo-url")
-  }
-  function setCompanyName(n: string) {
-    setCompanyNameState(n)
-    localStorage.setItem("fp-company-name", n)
-  }
+  // Re-hidrata caso o servidor reenvie valores novos (ex.: após revalidate).
+  useEffect(() => { setCompanyTypeState(normalizeCompanyType(initialType ?? null)) }, [initialType])
+  useEffect(() => { setLogoUrlState(initialLogoUrl ?? null) }, [initialLogoUrl])
+  useEffect(() => { setCompanyNameState(initialName?.trim() || "Minha Empresa") }, [initialName])
 
   return (
-    <Ctx.Provider value={{ companyType, setCompanyType, companyProfile: COMPANY_PROFILES[companyType], logoUrl, setLogoUrl, companyName, setCompanyName }}>
+    <Ctx.Provider value={{
+      companyType,
+      setCompanyType: setCompanyTypeState,
+      companyProfile: COMPANY_PROFILES[companyType],
+      logoUrl,
+      setLogoUrl: setLogoUrlState,
+      companyName,
+      setCompanyName: setCompanyNameState,
+    }}>
       {children}
     </Ctx.Provider>
   )
