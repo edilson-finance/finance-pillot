@@ -7,8 +7,18 @@ export async function getSessionProfile() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
-  const { data: profile } = await supabase
-    .from("profiles").select("*, companies(*)").eq("id", user.id).single()
+  // IMPORTANTE: após a migração 0023, company_members e member_permissions
+  // ligam profiles↔companies, criando relações extras. Por isso o embed precisa
+  // apontar explicitamente a FK direta (profiles.company_id); caso contrário o
+  // PostgREST falha com PGRST201 (ambiguidade) e o perfil vem nulo — jogando o
+  // usuário em loop no onboarding. Usamos maybeSingle para distinguir "sem
+  // perfil" (vai ao onboarding) de erro real (estoura), sem cair em loop.
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("*, companies!profiles_company_id_fkey(*)")
+    .eq("id", user.id)
+    .maybeSingle()
+  if (error) throw new Error(`Falha ao carregar perfil: ${error.message}`)
   if (!profile) redirect("/onboarding")
   // Usuário desativado por um administrador: bloqueia o acesso ao app.
   if (profile.active === false) redirect("/conta-desativada")
