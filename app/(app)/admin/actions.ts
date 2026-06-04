@@ -53,6 +53,24 @@ export async function createCompany(formData: FormData): Promise<CreateCompanyRe
   return { error: null, companyId: String(companyId) }
 }
 
+export async function updateCompanyName(companyId: string, name: string): Promise<Result> {
+  const guard = await assertSuperAdmin()
+  if (!guard.ok) return { error: guard.error }
+
+  const trimmed = name.trim()
+  if (!trimmed) return { error: "O nome da empresa não pode ficar vazio." }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("fn_admin_update_company", {
+    p_company_id: companyId, p_name: trimmed,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath("/admin")
+  revalidatePath(`/admin/companies/${companyId}`)
+  return { error: null }
+}
+
 export async function createUser(formData: FormData): Promise<CreateUserResult> {
   const guard = await assertSuperAdmin()
   if (!guard.ok) return { error: guard.error }

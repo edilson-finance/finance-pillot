@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { Pencil, Check, X } from "lucide-react"
 import type { CompanyDetail, AdminUser } from "@/lib/db/admin"
-import { createUser, setUserCompany } from "../../actions"
+import { createUser, setUserCompany, updateCompanyName } from "../../actions"
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
@@ -21,6 +22,8 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
   const [pending, start] = useTransition()
   const [showCreate, setShowCreate] = useState(false)
   const [linkUserId, setLinkUserId] = useState("")
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState(detail.name)
 
   const card: React.CSSProperties = {
     background: "var(--bg-secondary)", border: "1px solid var(--border)",
@@ -38,6 +41,17 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
       const res = await createUser(formData)
       if (res.error) { setError(res.error); return }
       setMsg("Usuário criado."); setShowCreate(false); router.refresh()
+    })
+  }
+
+  function onSaveName() {
+    const trimmed = nameDraft.trim()
+    if (!trimmed || trimmed === detail.name) { setEditingName(false); return }
+    setError(null); setMsg(null)
+    start(async () => {
+      const res = await updateCompanyName(detail.id, trimmed)
+      if (res.error) { setError(res.error); return }
+      setMsg("Nome da empresa atualizado."); setEditingName(false); router.refresh()
     })
   }
 
@@ -60,7 +74,38 @@ export default function CompanyDetailClient({ detail, allUsers }: { detail: Comp
           background: "transparent", border: "none", color: "var(--accent)",
           cursor: "pointer", fontSize: "12px", padding: 0, marginBottom: "8px",
         }}>← Voltar</button>
-        <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>{detail.name}</h1>
+        {editingName ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input
+              autoFocus value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSaveName()
+                else if (e.key === "Escape") { setNameDraft(detail.name); setEditingName(false) }
+              }}
+              style={{ ...inputStyle, width: "auto", minWidth: "260px", fontSize: "18px", fontWeight: 800, padding: "6px 10px" }}
+            />
+            <button onClick={onSaveName} disabled={pending} title="Salvar" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px",
+              background: "var(--success)", color: "#fff", border: "none", borderRadius: "8px",
+              cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1,
+            }}><Check size={15} /></button>
+            <button onClick={() => { setNameDraft(detail.name); setEditingName(false) }} title="Cancelar" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px",
+              background: "var(--bg-tertiary)", color: "var(--text-secondary)", border: "1px solid var(--border)",
+              borderRadius: "8px", cursor: "pointer",
+            }}><X size={15} /></button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h1 style={{ fontSize: "20px", fontWeight: 800, color: "var(--text-primary)" }}>{detail.name}</h1>
+            <button onClick={() => { setNameDraft(detail.name); setEditingName(true) }} title="Editar nome" style={{
+              display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px",
+              background: "var(--bg-tertiary)", color: "var(--text-secondary)", border: "1px solid var(--border)",
+              borderRadius: "8px", cursor: "pointer",
+            }}><Pencil size={14} /></button>
+          </div>
+        )}
         <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>{detail.type}</p>
       </div>
 
