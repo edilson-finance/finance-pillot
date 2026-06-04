@@ -113,7 +113,12 @@ export async function deleteCategory(id: string): Promise<Result> {
 
 export async function seedDefaults(): Promise<Result> {
   const supabase = await createClient()
-  const { data: prof } = await supabase.from("profiles").select("company_id").single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: "Sessão expirada. Entre novamente." }
+  // .eq("id", user.id): sem ele o .single() quebra em empresas com 2+ membros
+  // (a RLS deixa ver os profiles dos colegas). Ver lib/db/company.ts.
+  const { data: prof } = await supabase
+    .from("profiles").select("company_id").eq("id", user.id).maybeSingle()
   if (!prof?.company_id) return { ok: false, error: "Empresa não identificada." }
   const { error } = await supabase.rpc("fn_seed_default_categories", { p_company: prof.company_id })
   if (error) return { ok: false, error: error.message }

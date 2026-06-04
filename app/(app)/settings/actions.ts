@@ -17,12 +17,17 @@ function revalidate() {
   revalidatePath("/", "layout")
 }
 
-// Resolve o company_id reutilizando o MESMO client da operação. Usar um client
-// por request evita a corrida de refresh de token do @supabase/ssr (duas
-// instâncias tentando rotacionar o refresh token), que fazia o upload de logo
-// chegar ao Storage como anônimo e violar a RLS.
+// Resolve o company_id do PRÓPRIO usuário. O filtro .eq("id", user.id) é
+// obrigatório: após a migração 0023 a RLS de profiles deixa o usuário enxergar
+// todos os colegas da mesma empresa (company_id = auth_company_id()). Sem o
+// filtro, em empresas com 2+ membros o select retorna várias linhas e o
+// .single() falha — fazendo company_id virar null e disparar "Empresa não
+// identificada". maybeSingle() garante 0 ou 1 linha sem estourar.
 async function companyId(supabase: SupabaseClient): Promise<string | null> {
-  const { data } = await supabase.from("profiles").select("company_id").single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase
+    .from("profiles").select("company_id").eq("id", user.id).maybeSingle()
   return data?.company_id ?? null
 }
 

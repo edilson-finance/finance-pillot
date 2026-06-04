@@ -27,7 +27,13 @@ const COLS =
 /** Carrega o cadastro da empresa do usuário logado (RLS escopa por company_id). */
 export async function getCompanySettings(): Promise<CompanySettings | null> {
   const supabase = await createClient()
-  const { data: prof } = await supabase.from("profiles").select("company_id").single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  // .eq("id", user.id) é obrigatório: a RLS de profiles deixa ver os colegas da
+  // mesma empresa, então sem o filtro o .single() recebe N linhas em empresas
+  // com 2+ membros e o cadastro vinha vazio. maybeSingle = 0 ou 1 linha.
+  const { data: prof } = await supabase
+    .from("profiles").select("company_id").eq("id", user.id).maybeSingle()
   if (!prof?.company_id) return null
   const { data, error } = await supabase
     .from("companies")
