@@ -224,9 +224,11 @@ export default function DrePage() {
   }, [showOnlyResults, dreNodes])
 
   const byId = useMemo(() => Object.fromEntries(dreNodes.map(n => [n.id, n])), [dreNodes])
+  const sumV = (...ids: string[]) => ids.reduce((s, id) => s + (byId[id]?.valor ?? 0), 0)
   const rbV = byId["receita_bruta"]?.valor ?? 0
   const rlV = byId["receita_liquida"]?.valor ?? 0
-  const cdV = byId["custos_despesas"]?.valor ?? 0
+  // Custos e despesas = soma de todas as posições que reduzem o resultado (já armazenadas com sinal negativo)
+  const cdV = sumV("custos", "despesas_operacionais", "depreciacao", "resultado_financeiro", "ir_csll")
   const llV = byId["lucro_liquido"]?.valor ?? 0
   const pctOf = (v: number) => (rbV > 0 ? `${((v / rbV) * 100).toFixed(1)}%` : "—")
   const keyKpis = [
