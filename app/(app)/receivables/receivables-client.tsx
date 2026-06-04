@@ -7,10 +7,14 @@ import Link from "next/link"
 import type { Receivable } from "@/lib/db/receivables"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { createReceivable, updateReceivable, deleteReceivable, markReceived } from "./actions"
+import { FormReceita, type Options } from "../transactions/transactions-client"
 
 const R = formatCurrency
 
 type Opt = { id: string; name: string }
+type Cat = Opt & { kind: string }
+type Acc = Opt & { balance: number }
+type Prod = Opt & { price: number; unit: string | null }
 
 const stCfg: Record<string, { label: string; c: string; bg: string }> = {
   a_receber: { label: "A Receber",  c: "var(--warning)", bg: "var(--warning-soft)" },
@@ -30,19 +34,26 @@ function daysOverdue(due: string): number {
   return Math.max(0, Math.round((today.getTime() - d.getTime()) / 86400000))
 }
 
-export default function ReceivablesClient({ receivables, customers, categories, accounts }: {
+export default function ReceivablesClient({ receivables, customers, categories, accounts, costCenters, suppliers, products }: {
   receivables: Receivable[]
   customers: Opt[]
-  categories: Opt[]
-  accounts: Opt[]
+  categories: Cat[]
+  accounts: Acc[]
+  costCenters: Opt[]
+  suppliers: Opt[]
+  products: Prod[]
 }) {
   const router = useRouter()
   const [filter, setFilter] = useState("todos")
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [newKey, setNewKey] = useState(0)
   const [editing, setEditing] = useState<Receivable | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const o: Options = { categories, accounts, costCenters, customers, suppliers, products }
 
   const filtered = receivables
     .filter(r => filter === "todos" || r.status === filter)
@@ -55,7 +66,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   }
   const emAtrasoCount = receivables.filter(r => r.status === "em_atraso").length
 
-  function openNew() { setEditing(null); setError(null); setShowForm(true) }
+  function openNew() { setShowNew(true); setNewKey((k) => k + 1) }
   function openEdit(r: Receivable) { setEditing(r); setError(null); setShowForm(true) }
   function closeForm() { setShowForm(false); setEditing(null); setError(null) }
 
@@ -121,7 +132,20 @@ export default function ReceivablesClient({ receivables, customers, categories, 
         ))}
       </div>
 
-      {/* Form */}
+      {/* Formulário completo (igual a Lançamentos) — apenas para nova cobrança */}
+      {showNew && (
+        <div style={{ marginBottom:"16px" }}>
+          <FormReceita
+            key={newKey}
+            o={o}
+            onSaved={() => router.refresh()}
+            onNew={() => setNewKey((k) => k + 1)}
+            onCancel={() => setShowNew(false)}
+          />
+        </div>
+      )}
+
+      {/* Form simples — apenas para edição de cobrança existente */}
       {showForm && (
         <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>

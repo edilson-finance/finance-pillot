@@ -7,10 +7,14 @@ import type { Payable } from "@/lib/db/payables"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { createPayable, updatePayable, deletePayable, markPaid } from "./actions"
+import { FormDespesa, type Options } from "../transactions/transactions-client"
 
 const R = formatCurrency
 
 type Opt = { id: string; name: string }
+type Cat = Opt & { kind: string }
+type Acc = Opt & { balance: number }
+type Prod = Opt & { price: number; unit: string | null }
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
@@ -34,22 +38,28 @@ function getDueStatus(vencimento: string, status: string): { label: string; rowB
   return                  { label:`${days}d`,    rowBg:"transparent",            dateColor:"var(--success)", icon:null,        badge:{bg:"var(--success-soft)", c:"var(--success)"} }
 }
 
-export default function PayablesClient({ payables, suppliers, categories, accounts }: {
+export default function PayablesClient({ payables, suppliers, categories, accounts, costCenters, products }: {
   payables: Payable[]
   suppliers: Opt[]
-  categories: Opt[]
-  accounts: Opt[]
+  categories: Cat[]
+  accounts: Acc[]
+  costCenters: Opt[]
+  products: Prod[]
 }) {
   const router = useRouter()
   const [filter, setFilter] = useState("todos")
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [newKey, setNewKey] = useState(0)
   const [editing, setEditing] = useState<Payable | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const { range } = useDateRange()
 
-  function openNew() { setEditing(null); setError(null); setShowForm(true) }
+  const o: Options = { categories, accounts, costCenters, customers: [], suppliers, products }
+
+  function openNew() { setShowNew(true); setNewKey((k) => k + 1) }
   function openEdit(p: Payable) { setEditing(p); setError(null); setShowForm(true) }
   function closeForm() { setShowForm(false); setEditing(null); setError(null) }
 
@@ -146,7 +156,20 @@ export default function PayablesClient({ payables, suppliers, categories, accoun
         ))}
       </div>
 
-      {/* Form */}
+      {/* Formulário completo (igual a Lançamentos) — apenas para nova conta */}
+      {showNew && (
+        <div style={{ marginBottom:"16px" }}>
+          <FormDespesa
+            key={newKey}
+            o={o}
+            onSaved={() => router.refresh()}
+            onNew={() => setNewKey((k) => k + 1)}
+            onCancel={() => setShowNew(false)}
+          />
+        </div>
+      )}
+
+      {/* Form simples — apenas para edição de conta existente */}
       {showForm && (
         <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>

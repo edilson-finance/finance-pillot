@@ -393,7 +393,7 @@ function ItemsEditor({ items, setItems, products }: { items: Item[]; setItems: (
 }
 
 // ── botões de ação do rodapé ─────────────────────────────────────────────────
-function Actions({ label, color, saving, onKeepNew }: { label: string; color: string; saving: boolean; onKeepNew: () => void }) {
+function Actions({ label, color, saving, onKeepNew, onCancel }: { label: string; color: string; saving: boolean; onKeepNew: () => void; onCancel?: () => void }) {
   const router = useRouter()
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "10px", marginTop: "24px" }}>
@@ -403,7 +403,7 @@ function Actions({ label, color, saving, onKeepNew }: { label: string; color: st
       <button type="submit" disabled={saving} onClick={onKeepNew} style={{ padding: "13px 18px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", borderRadius: "10px", fontSize: "13px", color: "var(--text-secondary)", cursor: "pointer", fontFamily: "inherit" }}>
         Salvar e novo
       </button>
-      <button type="button" onClick={() => router.push("/")} style={{ padding: "13px 18px", background: "transparent", border: "1px solid var(--border)", borderRadius: "10px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
+      <button type="button" onClick={() => (onCancel ? onCancel() : router.push("/"))} style={{ padding: "13px 18px", background: "transparent", border: "1px solid var(--border)", borderRadius: "10px", fontSize: "13px", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}>
         Cancelar
       </button>
     </div>
@@ -448,7 +448,7 @@ function useSubmit(action: (fd: FormData) => Promise<{ error: string | null }>, 
 const card: React.CSSProperties = { background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "14px", padding: "26px" }
 
 // ════════════════════════ RECEITA ════════════════════════
-function FormReceita({ o, onSaved, onNew }: { o: Options; onSaved: () => void; onNew: () => void }) {
+export function FormReceita({ o, onSaved, onNew, onCancel }: { o: Options; onSaved: () => void; onNew: () => void; onCancel?: () => void }) {
   const C = "var(--success)"
   const { saving, error, ok, setOk, keepNew, onSubmit } = useSubmit(createReceita, onSaved)
   const [pm, setPm] = useState("PIX")
@@ -518,16 +518,16 @@ function FormReceita({ o, onSaved, onNew }: { o: Options; onSaved: () => void; o
       <Dropzone files={files} setFiles={setFiles} accept="PDF, JPG, PNG, XML" />
 
       <Banner error={error} ok={false} />
-      <Actions label="Salvar Receita" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} />
+      <Actions label="Salvar Receita" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} onCancel={onCancel} />
       <SuccessModal open={ok} color={C} title="Receita salva!"
         subtitle="O lançamento foi registrado em Contas a Receber. A baixa no caixa é criada automaticamente quando o status é Recebido."
-        onNew={onNew} onClose={() => setOk(false)} />
+        onNew={onNew} onClose={() => { setOk(false); onCancel?.() }} />
     </form>
   )
 }
 
 // ════════════════════════ DESPESA ════════════════════════
-function FormDespesa({ o, onSaved, onNew }: { o: Options; onSaved: () => void; onNew: () => void }) {
+export function FormDespesa({ o, onSaved, onNew, onCancel }: { o: Options; onSaved: () => void; onNew: () => void; onCancel?: () => void }) {
   const C = "var(--danger)"
   const { saving, error, ok, setOk, keepNew, onSubmit } = useSubmit(createDespesa, onSaved)
   const [pm, setPm] = useState("PIX")
@@ -600,10 +600,10 @@ function FormDespesa({ o, onSaved, onNew }: { o: Options; onSaved: () => void; o
       <Dropzone files={files} setFiles={setFiles} accept="PDF, JPG, PNG, XML" />
 
       <Banner error={error} ok={false} />
-      <Actions label="Salvar Despesa" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} />
+      <Actions label="Salvar Despesa" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} onCancel={onCancel} />
       <SuccessModal open={ok} color={C} title="Despesa salva!"
         subtitle="O lançamento foi registrado em Contas a Pagar. A baixa no caixa é criada automaticamente quando o status é Pago."
-        onNew={onNew} onClose={() => setOk(false)} />
+        onNew={onNew} onClose={() => { setOk(false); onCancel?.() }} />
     </form>
   )
 }
@@ -660,7 +660,7 @@ function FormTransferencia({ o, onSaved, onNew }: { o: Options; onSaved: () => v
 }
 
 // ── tipos das opções ─────────────────────────────────────────────────────────
-type Options = {
+export type Options = {
   categories: Cat[]; accounts: Acc[]; costCenters: Opt[]; customers: Opt[]; suppliers: Opt[]; products: Prod[]
 }
 
