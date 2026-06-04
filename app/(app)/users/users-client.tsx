@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail, User, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail, User, ChevronDown, ChevronUp, Pencil, Ban, RotateCcw } from "lucide-react"
 import { MEMBER_MODULES } from "@/lib/modules"
-import { createInvite, revokeInvite, updateUserRole, setMemberPermissions, removeUser } from "./actions"
+import { createInvite, revokeInvite, updateUserRole, setMemberPermissions, removeUser, updateUserName, setUserActive } from "./actions"
 
 export interface CompanyUser {
   id: string
   name: string
   email: string
   role: string
+  active: boolean
   modules: string[]
 }
 export interface PendingInvite {
@@ -57,6 +58,7 @@ export default function UsersClient({
   const [showLegend, setShowLegend] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [editing, setEditing] = useState<CompanyUser | null>(null)
+  const [editingName, setEditingName] = useState<CompanyUser | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -93,11 +95,31 @@ export default function UsersClient({
   }
 
   function doRemove(u: CompanyUser) {
-    if (!confirm(`Remover ${u.name || u.email} da empresa?`)) return
+    if (!confirm(`Remover ${u.name || u.email} da empresa? Esta ação exclui o cadastro e não pode ser desfeita.`)) return
     setError(null)
     startTransition(async () => {
       const res = await removeUser(u.id)
       if (res.error) setError(res.error)
+    })
+  }
+
+  function toggleActive(u: CompanyUser) {
+    const next = !u.active
+    const verb = next ? "Reativar" : "Desativar"
+    if (!confirm(`${verb} o acesso de ${u.name || u.email}?${next ? "" : " O usuário não conseguirá entrar no sistema até ser reativado."}`)) return
+    setError(null)
+    startTransition(async () => {
+      const res = await setUserActive(u.id, next)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  function saveName(u: CompanyUser, name: string) {
+    setError(null)
+    startTransition(async () => {
+      const res = await updateUserName(u.id, name)
+      if (res.error) setError(res.error)
+      else setEditingName(null)
     })
   }
 
@@ -216,12 +238,16 @@ export default function UsersClient({
                 const isSelf = u.id === currentUserId
                 const initials = (u.name || u.email).split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()
                 return (
-                  <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? "1px solid var(--border)" : "none" }}>
+                  <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? "1px solid var(--border)" : "none", opacity: u.active ? 1 : 0.55 }}>
                     <td style={{ padding: "13px 16px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: rc.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 800, color: rc.color, flexShrink: 0 }}>{initials}</div>
                         <div>
-                          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{u.name || "—"}{isSelf && <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 400 }}> (você)</span>}</div>
+                          <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            {u.name || "—"}
+                            {isSelf && <span style={{ fontSize: "10px", color: "var(--text-muted)", fontWeight: 400 }}>(você)</span>}
+                            {!u.active && <span style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--danger)", background: "var(--danger-soft)", padding: "1px 7px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "0.3px" }}>Desativado</span>}
+                          </div>
                           <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{u.email}</div>
                         </div>
                       </div>
@@ -246,10 +272,18 @@ export default function UsersClient({
                         : "Acesso total"}
                     </td>
                     <td style={{ padding: "13px 16px" }}>
-                      <div style={{ display: "flex", gap: "6px" }}>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        <button onClick={() => setEditingName(u)} disabled={isPending} style={{ ...btnGhost, padding: "5px 10px", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Pencil size={12} /> Editar
+                        </button>
                         {u.role === "member" && (
                           <button onClick={() => setEditing(u)} style={{ ...btnGhost, padding: "5px 10px", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px" }}>
                             <Settings2 size={12} /> Permissões
+                          </button>
+                        )}
+                        {!isSelf && (
+                          <button onClick={() => toggleActive(u)} disabled={isPending} style={{ padding: "5px 10px", background: u.active ? "var(--warning-soft)" : "var(--success-soft)", border: `1px solid ${u.active ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)"}`, borderRadius: "6px", fontSize: "11px", color: u.active ? "var(--warning)" : "var(--success)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: "4px" }}>
+                            {u.active ? <><Ban size={12} /> Desativar</> : <><RotateCcw size={12} /> Reativar</>}
                           </button>
                         )}
                         {!isSelf && (
@@ -317,6 +351,51 @@ export default function UsersClient({
           saving={isPending}
         />
       )}
+
+      {editingName && (
+        <EditNameModal
+          user={editingName}
+          onClose={() => setEditingName(null)}
+          onSave={(name) => saveName(editingName, name)}
+          saving={isPending}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditNameModal({ user, onClose, onSave, saving }: {
+  user: CompanyUser
+  onClose: () => void
+  onSave: (name: string) => void
+  saving: boolean
+}) {
+  const [name, setName] = useState(user.name)
+  const trimmed = name.trim()
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "24px" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "22px", width: "100%", maxWidth: "440px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+          <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Editar usuário</span>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-muted)" }}><X size={16} /></button>
+        </div>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "14px" }}>{user.email}</p>
+        <label style={lbl}>Nome</label>
+        <input
+          autoFocus
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && trimmed && !saving) onSave(trimmed) }}
+          placeholder="Nome do usuário"
+          style={inp}
+        />
+        <div style={{ display: "flex", gap: "8px", marginTop: "18px", justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={btnGhost}>Cancelar</button>
+          <button onClick={() => onSave(trimmed)} disabled={saving || !trimmed} style={{ ...btnPrimary, opacity: saving || !trimmed ? 0.6 : 1, cursor: saving || !trimmed ? "not-allowed" : "pointer" }}>
+            {saving ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

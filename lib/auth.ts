@@ -10,6 +10,8 @@ export async function getSessionProfile() {
   const { data: profile } = await supabase
     .from("profiles").select("*, companies(*)").eq("id", user.id).single()
   if (!profile) redirect("/onboarding")
+  // Usuário desativado por um administrador: bloqueia o acesso ao app.
+  if (profile.active === false) redirect("/conta-desativada")
   return { user, profile }
 }
 

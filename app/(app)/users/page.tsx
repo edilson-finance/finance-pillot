@@ -31,11 +31,12 @@ export default async function UsersPage() {
     permsByUser.set(p.user_id, arr)
   }
 
-  const users: CompanyUser[] = (usersRaw ?? []).map((u: { id: string; name: string; role: string; email: string; created_at: string }) => ({
+  const users: CompanyUser[] = (usersRaw ?? []).map((u: { id: string; name: string; role: string; email: string; active: boolean; created_at: string }) => ({
     id: u.id,
     name: u.name,
     email: u.email,
     role: u.role,
+    active: u.active,
     modules: permsByUser.get(u.id) ?? [],
   }))
 

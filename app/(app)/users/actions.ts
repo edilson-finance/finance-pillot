@@ -93,3 +93,21 @@ export async function removeUser(userId: string): Promise<Result> {
   revalidatePath("/users")
   return { error: null }
 }
+
+export async function updateUserName(userId: string, name: string): Promise<Result> {
+  const trimmed = name.trim()
+  if (!trimmed) return { error: "O nome não pode ficar vazio." }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("set_user_name", { p_user_id: userId, p_name: trimmed })
+  if (error) return { error: error.message }
+  revalidatePath("/users")
+  return { error: null }
+}
+
+export async function setUserActive(userId: string, active: boolean): Promise<Result> {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_active: active })
+  if (error) return { error: error.message }
+  revalidatePath("/users")
+  return { error: null }
+}
