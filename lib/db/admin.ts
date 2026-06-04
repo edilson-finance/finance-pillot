@@ -52,6 +52,13 @@ export type AdminUser = {
   last_sign_in: string | null
 }
 
+export type UserCompanyLink = {
+  company_id: string
+  company_name: string
+  role: string
+  is_active: boolean
+}
+
 const num = (v: unknown) => Number(v ?? 0)
 
 export async function listCompaniesOverview(): Promise<CompanyOverview[]> {

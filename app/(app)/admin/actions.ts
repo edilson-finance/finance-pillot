@@ -1,6 +1,7 @@
 "use server"
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import type { UserCompanyLink } from "@/lib/db/admin"
 
 type Result = { error: string | null }
 type CreateUserResult = Result & { userId?: string }
@@ -126,6 +127,62 @@ export async function setUserCompany(
     p_user_id: userId, p_company_id: companyId, p_role: role,
   })
   if (error) return { error: error.message }
+  revalidatePath("/admin")
+  revalidatePath("/admin/users")
+  return { error: null }
+}
+
+// Desvincula o usuário de uma empresa (remove a participação em company_members).
+export async function unlinkUserCompany(userId: string, companyId: string): Promise<Result> {
+  const guard = await assertSuperAdmin()
+  if (!guard.ok) return { error: guard.error }
+  const supabase = await createClient()
+  const { error } = await supabase.rpc("fn_admin_unlink_user_company", {
+    p_user_id: userId, p_company_id: companyId,
+  })
+  if (error) return { error: error.message }
+  revalidatePath("/admin")
+  revalidatePath("/admin/users")
+  return { error: null }
+}
+
+// Lista TODAS as empresas vinculadas a um usuário, com papel e qual é a ativa.
+export async function getUserCompanies(
+  userId: string,
+): Promise<{ data: UserCompanyLink[]; error: string | null }> {
+  const guard = await assertSuperAdmin()
+  if (!guard.ok) return { data: [], error: guard.error }
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc("fn_admin_user_companies", { p_user_id: userId })
+  if (error) return { data: [], error: error.message }
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    company_id: String(r.company_id),
+    company_name: String(r.company_name ?? ""),
+    role: String(r.role ?? ""),
+    is_active: Boolean(r.is_active),
+  }))
+  return { data: rows, error: null }
+}
+
+// Atualiza nome, e-mail e/ou senha de um usuário (via edge function service_role).
+export async function updateUser(
+  userId: string,
+  fields: { name?: string; email?: string; password?: string },
+): Promise<Result> {
+  const guard = await assertSuperAdmin()
+  if (!guard.ok) return { error: guard.error }
+
+  const body: Record<string, unknown> = { user_id: userId }
+  if (typeof fields.name === "string") body.name = fields.name.trim()
+  const email = fields.email?.trim().toLowerCase()
+  if (email) body.email = email
+  if (fields.password) body.password = fields.password
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.functions.invoke("admin-update-user", { body })
+  if (error) return { error: await edgeFnError(error, "Falha ao atualizar usuário") }
+  if (data && data.updated === false) return { error: data.error ?? "Falha ao atualizar usuário" }
+
   revalidatePath("/admin")
   revalidatePath("/admin/users")
   return { error: null }
