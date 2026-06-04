@@ -6,6 +6,25 @@ type Result = { error: string | null }
 type CreateUserResult = Result & { userId?: string }
 type CreateCompanyResult = Result & { companyId?: string }
 
+// O functions.invoke do supabase-js transforma qualquer resposta non-2xx num
+// erro genérico ("Edge Function returned a non-2xx status code") e guarda a
+// resposta original em `context`. Aqui extraímos o motivo real do corpo JSON
+// (ex.: "A user with this email address has already been registered") para
+// que o super admin veja a causa em vez da mensagem genérica.
+async function edgeFnError(err: unknown, fallback: string): Promise<string> {
+  const ctx = (err as { context?: { json?: () => Promise<unknown> } } | null)?.context
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = (await ctx.json()) as { error?: unknown } | null
+      if (body?.error) return String(body.error)
+    } catch {
+      // corpo não-JSON: cai no fallback abaixo
+    }
+  }
+  const msg = (err as { message?: string } | null)?.message
+  return msg || fallback
+}
+
 async function assertSuperAdmin(): Promise<{ ok: boolean; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,7 +62,10 @@ export async function createCompany(formData: FormData): Promise<CreateCompanyRe
     const { data, error: fnErr } = await supabase.functions.invoke("admin-create-user", {
       body: { email: adminEmail, password: adminPassword, name: adminName, company_id: companyId, role: "admin" },
     })
-    if (fnErr) return { error: `Empresa criada, mas falhou ao criar admin: ${fnErr.message}`, companyId: String(companyId) }
+    if (fnErr) {
+      const reason = await edgeFnError(fnErr, "falha ao criar usuário")
+      return { error: `Empresa criada, mas falhou ao criar admin: ${reason}`, companyId: String(companyId) }
+    }
     if (data && data.created === false) {
       return { error: `Empresa criada, mas falhou ao criar admin: ${data.error}`, companyId: String(companyId) }
     }
@@ -86,7 +108,7 @@ export async function createUser(formData: FormData): Promise<CreateUserResult> 
   const { data, error } = await supabase.functions.invoke("admin-create-user", {
     body: { email, password, name, company_id: companyId, role },
   })
-  if (error) return { error: error.message }
+  if (error) return { error: await edgeFnError(error, "Falha ao criar usuário") }
   if (data && data.created === false) return { error: data.error ?? "Falha ao criar usuário" }
 
   revalidatePath("/admin")
