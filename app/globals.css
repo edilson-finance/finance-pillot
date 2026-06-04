@@ -9,16 +9,16 @@
 ───────────────────────────────────────────── */
 
 :root {
-  /* Fundos */
-  --bg-primary:    #070C18;
-  --bg-secondary:  #0D1526;
-  --bg-tertiary:   #142038;
-  --bg-elevated:   #1A2B4A;
-  --bg-hover:      #1E3255;
+  /* Fundos — navy profundo (tom da marca wiqfy) */
+  --bg-primary:    #0A0E24;
+  --bg-secondary:  #111634;
+  --bg-tertiary:   #18214A;
+  --bg-elevated:   #1F2A54;
+  --bg-hover:      #25305E;
 
   /* Bordas */
-  --border:        #1E3252;
-  --border-strong: #2A4572;
+  --border:        #232D58;
+  --border-strong: #32417A;
   --border-focus:  #4F46E5;
 
   /* Texto */
