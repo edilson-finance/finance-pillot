@@ -179,6 +179,141 @@ function Combo({ idName, nameName, options, color, placeholder, required }: {
   )
 }
 
+// ── máscaras e validações ────────────────────────────────────────────────────
+const onlyDigits = (s: string) => s.replace(/\D/g, "")
+
+function maskPhone(v: string): string {
+  const d = onlyDigits(v).slice(0, 11)
+  if (!d) return ""
+  let o = "(" + d.slice(0, 2)
+  if (d.length >= 2) o += ") "
+  if (d.length <= 10) {
+    o += d.slice(2, 6)
+    if (d.length > 6) o += "-" + d.slice(6, 10)
+  } else {
+    o += d.slice(2, 7)
+    if (d.length > 7) o += "-" + d.slice(7, 11)
+  }
+  return o
+}
+function maskDoc(v: string): string {
+  const d = onlyDigits(v).slice(0, 14)
+  if (d.length <= 11) {
+    let o = d.slice(0, 3)
+    if (d.length > 3) o += "." + d.slice(3, 6)
+    if (d.length > 6) o += "." + d.slice(6, 9)
+    if (d.length > 9) o += "-" + d.slice(9, 11)
+    return o
+  }
+  let o = d.slice(0, 2) + "." + d.slice(2, 5) + "." + d.slice(5, 8) + "/" + d.slice(8, 12)
+  if (d.length > 12) o += "-" + d.slice(12, 14)
+  return o
+}
+function isValidCPF(d: string): boolean {
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false
+  let s = 0
+  for (let i = 0; i < 9; i++) s += parseInt(d[i]) * (10 - i)
+  let r = (s * 10) % 11; if (r === 10) r = 0
+  if (r !== parseInt(d[9])) return false
+  s = 0
+  for (let i = 0; i < 10; i++) s += parseInt(d[i]) * (11 - i)
+  r = (s * 10) % 11; if (r === 10) r = 0
+  return r === parseInt(d[10])
+}
+function isValidCNPJ(d: string): boolean {
+  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false
+  const calc = (len: number) => {
+    const w = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    let s = 0
+    for (let i = 0; i < len; i++) s += parseInt(d[i]) * w[i]
+    const r = s % 11
+    return r < 2 ? 0 : 11 - r
+  }
+  return calc(12) === parseInt(d[12]) && calc(13) === parseInt(d[13])
+}
+const vEmail = (v: string) => (!v ? "" : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "E-mail inválido")
+const vPhone = (v: string) => {
+  const d = onlyDigits(v)
+  if (!d) return ""
+  return d.length === 10 || d.length === 11 ? "" : "Telefone incompleto"
+}
+const vDoc = (v: string) => {
+  const d = onlyDigits(v)
+  if (!d) return ""
+  if (d.length === 11) return isValidCPF(d) ? "" : "CPF inválido"
+  if (d.length === 14) return isValidCNPJ(d) ? "" : "CNPJ inválido"
+  return "CPF/CNPJ incompleto"
+}
+
+// input com máscara + validação inline (bloqueia o submit via setCustomValidity)
+function FieldInput({ name, type = "text", placeholder, required, mask, validate }: {
+  name: string; type?: string; placeholder?: string; required?: boolean
+  mask?: (v: string) => string; validate?: (v: string) => string
+}) {
+  const [v, setV] = useState("")
+  const [touched, setTouched] = useState(false)
+  const ref = useRef<HTMLInputElement>(null)
+  const err = validate ? validate(v) : ""
+  useEffect(() => { ref.current?.setCustomValidity(err) }, [err])
+  return (
+    <>
+      <input ref={ref} name={name} type={type} required={required} value={v} placeholder={placeholder}
+        autoComplete="off"
+        onChange={(e) => setV(mask ? mask(e.target.value) : e.target.value)}
+        onBlur={() => setTouched(true)}
+        style={{ ...inp, borderColor: touched && err ? "var(--danger)" : "var(--border)" }} />
+      {touched && err && <div style={{ fontSize: "11px", color: "var(--danger)", marginTop: "5px", fontWeight: 600 }}>{err}</div>}
+    </>
+  )
+}
+
+// campo monetário estilo caixa (R$ ao vivo); submete no formato pt-BR que o action espera
+function Money({ name, color, required }: { name: string; color: string; required?: boolean }) {
+  const [cents, setCents] = useState(0)
+  const ref = useRef<HTMLInputElement>(null)
+  const display = (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  useEffect(() => {
+    ref.current?.setCustomValidity(required && cents <= 0 ? "Informe um valor maior que zero" : "")
+  }, [cents, required])
+  const zero = cents === 0
+  return (
+    <div style={{ position: "relative" }}>
+      <span style={{ position: "absolute", left: "11px", top: "9px", fontSize: "13px", fontWeight: 600, color: zero ? "var(--text-muted)" : color, pointerEvents: "none" }}>R$</span>
+      <input ref={ref} name={name} required={required} inputMode="numeric" value={display}
+        onChange={(e) => { const d = onlyDigits(e.target.value); setCents(d ? parseInt(d.slice(0, 13)) : 0) }}
+        style={{ ...inp, paddingLeft: "36px", color: zero ? "var(--text-muted)" : "var(--text-primary)" }} />
+    </div>
+  )
+}
+
+// modal de sucesso
+function SuccessModal({ open, title, subtitle, color, onNew, onClose }: {
+  open: boolean; title: string; subtitle: string; color: string; onNew: () => void; onClose: () => void
+}) {
+  if (!open) return null
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: "100%", maxWidth: "400px", background: "var(--bg-secondary)", border: "1px solid var(--border)",
+        borderRadius: "16px", padding: "30px", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+      }}>
+        <div style={{ width: "62px", height: "62px", borderRadius: "50%", background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+          <CheckIcon size={30} color={color} />
+        </div>
+        <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--text-primary)", marginBottom: "7px" }}>{title}</div>
+        <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: "22px" }}>{subtitle}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <button type="button" onClick={onNew} style={{ padding: "12px", background: color, border: "none", borderRadius: "10px", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer", fontFamily: "inherit" }}>Lançar outro</button>
+          <button type="button" onClick={onClose} style={{ padding: "12px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", borderRadius: "10px", color: "var(--text-secondary)", fontSize: "13px", cursor: "pointer", fontFamily: "inherit" }}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── upload de anexos ─────────────────────────────────────────────────────────
 function Dropzone({ files, setFiles, accept }: { files: File[]; setFiles: (f: File[]) => void; accept: string }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -276,28 +411,31 @@ function Banner({ error, ok }: { error: string | null; ok: boolean }) {
 }
 
 // hook compartilhado de submit
-function useSubmit(action: (fd: FormData) => Promise<{ error: string | null }>, onDone: () => void) {
+function useSubmit(action: (fd: FormData) => Promise<{ error: string | null }>, onSaved: () => void) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState(false)
   const keepNew = useRef(false)
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const form = e.currentTarget
+    // dispara a validação nativa + mensagens de setCustomValidity (e-mail, telefone, CPF/CNPJ, valor)
+    if (!form.reportValidity()) return
     setSaving(true); setError(null); setOk(false)
-    const res = await action(new FormData(e.currentTarget))
+    const res = await action(new FormData(form))
     setSaving(false)
     if (res.error) { setError(res.error) }
-    else { setOk(true); onDone() }
+    else { setOk(true); onSaved() }
   }
-  return { saving, error, ok, keepNew, onSubmit }
+  return { saving, error, ok, setOk, keepNew, onSubmit }
 }
 
 const card: React.CSSProperties = { background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "14px", padding: "26px" }
 
 // ════════════════════════ RECEITA ════════════════════════
-function FormReceita({ o, onDone }: { o: Options; onDone: () => void }) {
+function FormReceita({ o, onSaved, onNew }: { o: Options; onSaved: () => void; onNew: () => void }) {
   const C = "var(--success)"
-  const { saving, error, ok, keepNew, onSubmit } = useSubmit(createReceita, onDone)
+  const { saving, error, ok, setOk, keepNew, onSubmit } = useSubmit(createReceita, onSaved)
   const [pm, setPm] = useState("PIX")
   const [status, setStatus] = useState("a_receber")
   const [detail, setDetail] = useState(false)
@@ -309,7 +447,7 @@ function FormReceita({ o, onDone }: { o: Options; onDone: () => void }) {
     <form onSubmit={onSubmit} style={card}>
       <Section>Identificação da Receita</Section>
       <div style={grid2}>
-        <Field label="Valor Total" req><input name="amount" type="number" step="0.01" min="0" required placeholder="0,00" style={inp} /></Field>
+        <Field label="Valor Total" req><Money name="amount" color={C} required /></Field>
         <Field label="Data de Vencimento / Entrega" req><input name="due_date" type="date" required defaultValue={today()} style={inp} /></Field>
         <Field label="Descrição da Receita" req span><input name="description" required placeholder="Ex: Medição 12 — Obra 07 / Prestação de serviço" style={inp} /></Field>
         <Field label="Data de Competência"><input name="competence_date" type="date" defaultValue={today()} style={inp} /></Field>
@@ -330,9 +468,9 @@ function FormReceita({ o, onDone }: { o: Options; onDone: () => void }) {
         <Field label="Cliente" req span>
           <Combo idName="customer_id" nameName="customer_name" options={o.customers} color="var(--success)" required placeholder="Buscar cliente cadastrado ou digitar nome..." />
         </Field>
-        <Field label="CPF / CNPJ"><input name="counterparty_doc" placeholder="00.000.000/0001-00" style={inp} /></Field>
-        <Field label="Contato (telefone / whatsapp)"><input name="contact" placeholder="(11) 99999-9999" style={inp} /></Field>
-        <Field label="E-mail para envio de recibo"><input name="email" type="email" placeholder="financeiro@cliente.com.br" style={inp} /></Field>
+        <Field label="CPF / CNPJ"><FieldInput name="counterparty_doc" mask={maskDoc} validate={vDoc} placeholder="00.000.000/0001-00" /></Field>
+        <Field label="Contato (telefone / whatsapp)"><FieldInput name="contact" mask={maskPhone} validate={vPhone} placeholder="(11) 99999-9999" /></Field>
+        <Field label="E-mail para envio de recibo"><FieldInput name="email" validate={vEmail} placeholder="financeiro@cliente.com.br" /></Field>
         <Field label="Prazo de Pagamento (dias)"><input name="payment_term_days" type="number" min="0" placeholder="30" style={inp} /></Field>
       </div>
 
@@ -364,16 +502,19 @@ function FormReceita({ o, onDone }: { o: Options; onDone: () => void }) {
       <Label>Anexos (NF, boleto, comprovante)</Label>
       <Dropzone files={files} setFiles={setFiles} accept="PDF, JPG, PNG, XML" />
 
-      <Banner error={error} ok={ok} />
+      <Banner error={error} ok={false} />
       <Actions label="Salvar Receita" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} />
+      <SuccessModal open={ok} color={C} title="Receita salva!"
+        subtitle="O lançamento foi registrado em Contas a Receber. A baixa no caixa é criada automaticamente quando o status é Recebido."
+        onNew={onNew} onClose={() => setOk(false)} />
     </form>
   )
 }
 
 // ════════════════════════ DESPESA ════════════════════════
-function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
+function FormDespesa({ o, onSaved, onNew }: { o: Options; onSaved: () => void; onNew: () => void }) {
   const C = "var(--danger)"
-  const { saving, error, ok, keepNew, onSubmit } = useSubmit(createDespesa, onDone)
+  const { saving, error, ok, setOk, keepNew, onSubmit } = useSubmit(createDespesa, onSaved)
   const [pm, setPm] = useState("PIX")
   const [status, setStatus] = useState("a_pagar")
   const [detail, setDetail] = useState(false)
@@ -385,7 +526,7 @@ function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
     <form onSubmit={onSubmit} style={card}>
       <Section>Identificação da Despesa</Section>
       <div style={grid2}>
-        <Field label="Valor Total" req><input name="amount" type="number" step="0.01" min="0" required placeholder="0,00" style={inp} /></Field>
+        <Field label="Valor Total" req><Money name="amount" color={C} required /></Field>
         <Field label="Data de Vencimento" req><input name="due_date" type="date" required defaultValue={today()} style={inp} /></Field>
         <Field label="Descrição da Despesa" req span><input name="description" required placeholder="Ex: Folha de maio / Aluguel escritório / Material Obra 07" style={inp} /></Field>
         <Field label="Data de Competência"><input name="competence_date" type="date" defaultValue={today()} style={inp} /></Field>
@@ -406,7 +547,7 @@ function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
         <Field label="Fornecedor" req span>
           <Combo idName="supplier_id" nameName="supplier_name" options={o.suppliers} color="var(--danger)" required placeholder="Buscar fornecedor cadastrado ou digitar nome..." />
         </Field>
-        <Field label="CPF / CNPJ"><input name="counterparty_doc" placeholder="00.000.000/0001-00" style={inp} /></Field>
+        <Field label="CPF / CNPJ"><FieldInput name="counterparty_doc" mask={maskDoc} validate={vDoc} placeholder="00.000.000/0001-00" /></Field>
         <Field label="Dados Bancários / PIX"><input name="counterparty_bank" placeholder="Chave PIX, banco, agência, conta" style={inp} /></Field>
       </div>
 
@@ -424,8 +565,8 @@ function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
         options={[{ v: "a_pagar", l: "A Pagar" }, { v: "pago", l: "Pago" }, { v: "pago_parcial", l: "Pago Parcialmente" }]} />
       <div style={{ height: "16px" }} />
       <div style={grid2}>
-        <Field label="Juros / Multa R$"><input name="interest" type="number" step="0.01" min="0" placeholder="0,00" style={inp} /></Field>
-        <Field label="Desconto Obtido R$"><input name="discount" type="number" step="0.01" min="0" placeholder="0,00" style={inp} /></Field>
+        <Field label="Juros / Multa R$"><Money name="interest" color={C} /></Field>
+        <Field label="Desconto Obtido R$"><Money name="discount" color={C} /></Field>
       </div>
 
       <Section>Parcelamento e Recorrência</Section>
@@ -443,23 +584,26 @@ function FormDespesa({ o, onDone }: { o: Options; onDone: () => void }) {
       <Label>Anexos (NF, boleto, comprovante)</Label>
       <Dropzone files={files} setFiles={setFiles} accept="PDF, JPG, PNG, XML" />
 
-      <Banner error={error} ok={ok} />
+      <Banner error={error} ok={false} />
       <Actions label="Salvar Despesa" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} />
+      <SuccessModal open={ok} color={C} title="Despesa salva!"
+        subtitle="O lançamento foi registrado em Contas a Pagar. A baixa no caixa é criada automaticamente quando o status é Pago."
+        onNew={onNew} onClose={() => setOk(false)} />
     </form>
   )
 }
 
 // ════════════════════════ TRANSFERÊNCIA ════════════════════════
-function FormTransferencia({ o, onDone }: { o: Options; onDone: () => void }) {
+function FormTransferencia({ o, onSaved, onNew }: { o: Options; onSaved: () => void; onNew: () => void }) {
   const C = "var(--accent)"
-  const { saving, error, ok, keepNew, onSubmit } = useSubmit(createTransferencia, onDone)
+  const { saving, error, ok, setOk, keepNew, onSubmit } = useSubmit(createTransferencia, onSaved)
   const [tt, setTt] = useState("PIX")
   const [files, setFiles] = useState<File[]>([])
   return (
     <form onSubmit={onSubmit} style={card}>
       <Section>Dados da Transferência</Section>
       <div style={grid2}>
-        <Field label="Valor" req><input name="amount" type="number" step="0.01" min="0" required placeholder="0,00" style={inp} /></Field>
+        <Field label="Valor" req><Money name="amount" color={C} required /></Field>
         <Field label="Data" req><input name="date" type="date" required defaultValue={today()} style={inp} /></Field>
         <Field label="Conta de Origem" req>
           <select name="account_id" required style={inp}><option value="">Selecione...</option>{o.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}{a.balance != null ? ` — ${brl(a.balance)}` : ""}</option>)}</select>
@@ -480,8 +624,8 @@ function FormTransferencia({ o, onDone }: { o: Options; onDone: () => void }) {
 
       <Section>Taxas (se houver)</Section>
       <div style={grid2}>
-        <Field label="Tarifa Bancária R$"><input name="fee" type="number" step="0.01" min="0" placeholder="0,00" style={inp} /></Field>
-        <Field label="IOF / Imposto R$"><input name="tax" type="number" step="0.01" min="0" placeholder="0,00" style={inp} /></Field>
+        <Field label="Tarifa Bancária R$"><Money name="fee" color={C} /></Field>
+        <Field label="IOF / Imposto R$"><Money name="tax" color={C} /></Field>
       </div>
       <div style={{ marginTop: "16px", padding: "13px 15px", borderRadius: "9px", background: "var(--bg-tertiary)", border: "1px solid var(--border)", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
         <strong style={{ color: "var(--text-primary)" }}>Importante</strong><br />
@@ -491,8 +635,11 @@ function FormTransferencia({ o, onDone }: { o: Options; onDone: () => void }) {
       <Label>Comprovante</Label>
       <Dropzone files={files} setFiles={setFiles} accept="PDF, JPG, PNG" />
 
-      <Banner error={error} ok={ok} />
+      <Banner error={error} ok={false} />
       <Actions label="Salvar Transferência" color={C} saving={saving} onKeepNew={() => (keepNew.current = true)} />
+      <SuccessModal open={ok} color={C} title="Transferência salva!"
+        subtitle="A movimentação entre contas foi registrada. Ela não impacta o DRE — apenas remaneja o saldo entre as contas."
+        onNew={onNew} onClose={() => setOk(false)} />
     </form>
   )
 }
@@ -532,7 +679,8 @@ export default function TransactionsClient({ categories, accounts, costCenters, 
   const [tab, setTab] = useState<"receita" | "despesa" | "transferencia">("receita")
   const [formKey, setFormKey] = useState(0)
   const o: Options = { categories, accounts, costCenters, customers, suppliers, products }
-  const onDone = () => { router.refresh(); setTimeout(() => setFormKey((k) => k + 1), 1200) }
+  const onSaved = () => router.refresh()
+  const onNew = () => setFormKey((k) => k + 1)
 
   const tabs = [
     { k: "receita", l: "Receita", c: "var(--success)" },
@@ -565,9 +713,9 @@ export default function TransactionsClient({ categories, accounts, costCenters, 
             })}
           </div>
 
-          {tab === "receita" && <FormReceita key={formKey} o={o} onDone={onDone} />}
-          {tab === "despesa" && <FormDespesa key={formKey} o={o} onDone={onDone} />}
-          {tab === "transferencia" && <FormTransferencia key={formKey} o={o} onDone={onDone} />}
+          {tab === "receita" && <FormReceita key={formKey} o={o} onSaved={onSaved} onNew={onNew} />}
+          {tab === "despesa" && <FormDespesa key={formKey} o={o} onSaved={onSaved} onNew={onNew} />}
+          {tab === "transferencia" && <FormTransferencia key={formKey} o={o} onSaved={onSaved} onNew={onNew} />}
         </div>
 
         {/* coluna lateral */}
