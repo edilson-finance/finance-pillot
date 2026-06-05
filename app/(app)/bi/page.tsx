@@ -501,13 +501,11 @@ export default function BiPage() {
 
       {/* ─── RECEITAS ─── */}
       {tab==="receitas" && <>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"10px", marginBottom:"16px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"10px", marginBottom:"16px" }}>
           {[
             { l:"Total Receita",   v:R(totalReceita) },
             { l:"Média/Período",   v:R(Math.round(totalReceita/Math.max(series.length,1))) },
-            { l:"Clientes Ativos", v:"12" },
             { l:"Ticket Médio",    v:R(kpis.ticketMedio) },
-            { l:"Recorrência",     v:"35%" },
           ].map(k=>(
             <div key={k.l} style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"12px 14px" }}>
               <div style={{ fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",marginBottom:"5px" }}>{k.l}</div>
@@ -547,10 +545,10 @@ export default function BiPage() {
                 </tr>
               </thead>
               <tbody>
-                {topClients.map((c,i)=>(
+                {topClients.map((c)=>(
                   <TableRow key={c.nome}
-                    cols={[c.nome, c.valor, `${c.percent.toFixed(1)}%`, i===0?"+12,3%":i===1?"+5,2%":"-3,1%"]}
-                    detail={{ "Variação vs mês ant.": i===0?"+R$16.400":"+R$4.900", "Média 3 meses": R(Math.round(c.valor*0.92)), "Inadimplência": i===0?"19,9%":i===3?"24,1%":"0%", "Ticket médio": R(Math.round(c.valor/3)) }}
+                    cols={[c.nome, c.valor, `${c.percent.toFixed(1)}%`, "—"]}
+                    detail={{ "Receita no período": R(c.valor), "% do total recebido": `${c.percent.toFixed(1)}%` }}
                   />
                 ))}
               </tbody>
@@ -561,13 +559,10 @@ export default function BiPage() {
 
       {/* ─── DESPESAS ─── */}
       {tab==="despesas" && <>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:"10px", marginBottom:"16px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:"10px", marginBottom:"16px" }}>
           {[
             { l:"Total Despesa",    v:R(totalDespesa) },
             { l:"Média/Período",    v:R(Math.round(totalDespesa/Math.max(series.length,1))) },
-            { l:"Fornecedores Ativos", v:"31" },
-            { l:"Média por Despesa",v:R(Math.round(totalDespesa/Math.max(series.length*4,1))) },
-            { l:"Fixas vs Variáveis",v:"34% / 66%" },
           ].map(k=>(
             <div key={k.l} style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"12px 14px" }}>
               <div style={{ fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",marginBottom:"5px" }}>{k.l}</div>
@@ -601,16 +596,16 @@ export default function BiPage() {
             <table style={{ width:"100%",borderCollapse:"collapse" }}>
               <thead>
                 <tr style={{ borderBottom:"1px solid var(--border)" }}>
-                  {["Categoria","Valor","% Total","Tipo"].map(h=>(
+                  {["Categoria","Valor","% Total","% Receita"].map(h=>(
                     <th key={h} style={{ padding:"7px 10px",textAlign:h==="Categoria"?"left":"right",fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.4px",fontWeight:600 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {topExpenses.map((e,i)=>(
+                {topExpenses.map((e)=>(
                   <TableRow key={e.nome}
-                    cols={[e.nome, e.valor, `${e.percent.toFixed(1)}%`, i<2?"Variável":"Fixa"]}
-                    detail={{ "Variação vs mês ant.": i===0?"+R$2.400":"-R$800", "Média 3 meses": R(Math.round(e.valor*0.94)), "% da Receita": `${((e.valor/312000)*100).toFixed(1)}%` }}
+                    cols={[e.nome, e.valor, `${e.percent.toFixed(1)}%`, kpis.faturamento>0?`${((e.valor/kpis.faturamento)*100).toFixed(1)}%`:"—"]}
+                    detail={{ "Valor no período": R(e.valor), "% do total despesas": `${e.percent.toFixed(1)}%`, "% da receita": kpis.faturamento>0?`${((e.valor/kpis.faturamento)*100).toFixed(1)}%`:"—" }}
                   />
                 ))}
               </tbody>

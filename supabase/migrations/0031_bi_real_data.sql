@@ -253,3 +253,7 @@ language sql stable set search_path to 'public' as $$
     'dataFinal', (select fim from pts order by wk desc limit 1)
   )
 $$;
+
+-- Views antigas (ignoravam o filtro de data) substituidas pelas RPCs acima.
+drop view if exists public.v_top_clients;
+drop view if exists public.v_top_expenses;
