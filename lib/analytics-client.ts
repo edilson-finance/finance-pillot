@@ -124,13 +124,14 @@ export function useRevenueSeries(range: DateRange) {
 
 export interface RankRow { nome: string; valor: number; percent: number }
 
-function useView(view: "v_top_clients" | "v_top_expenses") {
+function useRankRpc(fn: "fn_top_clients" | "fn_top_expenses", range: DateRange) {
   const [rows, setRows] = useState<RankRow[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     let active = true
+    setLoading(true)
     const supabase = createClient()
-    supabase.from(view).select("*").then(({ data }) => {
+    supabase.rpc(fn, { p_start: isoDate(range.start), p_end: isoDate(range.end) }).then(({ data }) => {
       if (!active) return
       setRows(((data ?? []) as any[]).map((r) => ({
         nome: r.nome, valor: Number(r.valor ?? 0), percent: Number(r.percent ?? 0),
@@ -138,12 +139,12 @@ function useView(view: "v_top_clients" | "v_top_expenses") {
       setLoading(false)
     })
     return () => { active = false }
-  }, [view])
+  }, [fn, range.start.getTime(), range.end.getTime()])
   return { rows, loading }
 }
 
-export const useTopClients = () => useView("v_top_clients")
-export const useTopExpenses = () => useView("v_top_expenses")
+export const useTopClients = (range: DateRange) => useRankRpc("fn_top_clients", range)
+export const useTopExpenses = (range: DateRange) => useRankRpc("fn_top_expenses", range)
 
 export interface HealthDim { nome: string; nota: number; status: string; descricao: string }
 
@@ -256,4 +257,151 @@ export function useCashflow(range: DateRange) {
     return () => { active = false }
   }, [range.start.getTime(), range.end.getTime()])
   return { rows, loading }
+}
+
+// ── Paleta de cores do BI (atribuída por índice) ──
+export const BI_PALETTE = [
+  "var(--accent)", "var(--success)", "var(--purple)", "var(--warning)",
+  "var(--danger)", "var(--info)",
+]
+
+export interface CategoryChild { nome: string; valor: number }
+export interface CategoryRow {
+  id: string; categoria: string; valor: number; pct: number
+  varPct: number | null; filhos: CategoryChild[]; cor: string
+}
+
+export function useCategoryBreakdown(range: DateRange, kind: "entrada" | "saida") {
+  const [rows, setRows] = useState<CategoryRow[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    const supabase = createClient()
+    supabase
+      .rpc("fn_category_breakdown", { p_start: isoDate(range.start), p_end: isoDate(range.end), p_kind: kind })
+      .then(({ data }) => {
+        if (!active) return
+        setRows(((data ?? []) as any[]).map((r, i) => ({
+          id: r.id, categoria: r.categoria, valor: Number(r.valor ?? 0),
+          pct: Number(r.pct ?? 0), varPct: r.varPct === null ? null : Number(r.varPct),
+          filhos: ((r.filhos ?? []) as any[]).map((f) => ({ nome: f.nome, valor: Number(f.valor ?? 0) })),
+          cor: BI_PALETTE[i % BI_PALETTE.length],
+        })))
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [range.start.getTime(), range.end.getTime(), kind])
+  return { rows, loading }
+}
+
+export interface DrillRow { nome: string; receita: number; despesa: number; varPct: number | null }
+
+export function useDrilldown(range: DateRange, dim: "categoria" | "centro_custo" | "cliente" | "fornecedor") {
+  const [rows, setRows] = useState<DrillRow[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    const supabase = createClient()
+    supabase
+      .rpc("fn_drilldown", { p_start: isoDate(range.start), p_end: isoDate(range.end), p_dim: dim })
+      .then(({ data }) => {
+        if (!active) return
+        setRows(((data ?? []) as any[]).map((r) => ({
+          nome: r.nome, receita: Number(r.receita ?? 0), despesa: Number(r.despesa ?? 0),
+          varPct: r.varPct === null ? null : Number(r.varPct),
+        })))
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [range.start.getTime(), range.end.getTime(), dim])
+  return { rows, loading }
+}
+
+export interface PeriodSide { receita: number; despesa: number; resultado: number }
+export interface PeriodComparison { atual: PeriodSide; anterior: PeriodSide; labelAtual: string; labelAnterior: string }
+const ZERO_SIDE: PeriodSide = { receita: 0, despesa: 0, resultado: 0 }
+
+export function usePeriodComparison(range: DateRange) {
+  const [data, setData] = useState<PeriodComparison>({ atual: ZERO_SIDE, anterior: ZERO_SIDE, labelAtual: "", labelAnterior: "" })
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    const supabase = createClient()
+    supabase
+      .rpc("fn_period_comparison", { p_start: isoDate(range.start), p_end: isoDate(range.end) })
+      .then(({ data: d }) => {
+        if (!active) return
+        const r = (d ?? {}) as any
+        setData({
+          atual: { receita: Number(r.atual?.receita ?? 0), despesa: Number(r.atual?.despesa ?? 0), resultado: Number(r.atual?.resultado ?? 0) },
+          anterior: { receita: Number(r.anterior?.receita ?? 0), despesa: Number(r.anterior?.despesa ?? 0), resultado: Number(r.anterior?.resultado ?? 0) },
+          labelAtual: r.labelAtual ?? "", labelAnterior: r.labelAnterior ?? "",
+        })
+        setLoading(false)
+      })
+    return () => { active = false }
+  }, [range.start.getTime(), range.end.getTime()])
+  return { data, loading }
+}
+
+export interface AgingRow { faixa: string; valor: number; qtd: number }
+export interface InadEvoRow { mes: string; taxa: number; valor: number }
+export interface InadData {
+  taxa: number; valorAtraso: number; clientesInad: number; prazoMedioDias: number
+  aging: AgingRow[]; evolucao: InadEvoRow[]
+}
+const ZERO_INAD: InadData = { taxa: 0, valorAtraso: 0, clientesInad: 0, prazoMedioDias: 0, aging: [], evolucao: [] }
+
+export function useInadimplencia() {
+  const [data, setData] = useState<InadData>(ZERO_INAD)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+    supabase.rpc("fn_inadimplencia").then(({ data: d }) => {
+      if (!active) return
+      const r = (d ?? {}) as any
+      setData({
+        taxa: Number(r.taxa ?? 0), valorAtraso: Number(r.valorAtraso ?? 0),
+        clientesInad: Number(r.clientesInad ?? 0), prazoMedioDias: Number(r.prazoMedioDias ?? 0),
+        aging: ((r.aging ?? []) as any[]).map((a) => ({ faixa: a.faixa, valor: Number(a.valor ?? 0), qtd: Number(a.qtd ?? 0) })),
+        evolucao: ((r.evolucao ?? []) as any[]).map((e) => ({ mes: e.mes, taxa: Number(e.taxa ?? 0), valor: Number(e.valor ?? 0) })),
+      })
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [])
+  return { data, loading }
+}
+
+export interface ProjPonto { label: string; fim: string; saldo: number }
+export interface CashflowProjection {
+  saldoAtual: number; pontos: ProjPonto[]; menorSaldo: number
+  menorLabel: string; menorFim: string; saldoFinal: number; dataFinal: string
+}
+const ZERO_PROJ: CashflowProjection = { saldoAtual: 0, pontos: [], menorSaldo: 0, menorLabel: "", menorFim: "", saldoFinal: 0, dataFinal: "" }
+
+export function useCashflowProjection(weeks = 13) {
+  const [data, setData] = useState<CashflowProjection>(ZERO_PROJ)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let active = true
+    const supabase = createClient()
+    supabase.rpc("fn_cashflow_projection", { p_weeks: weeks }).then(({ data: d }) => {
+      if (!active) return
+      const r = (d ?? {}) as any
+      setData({
+        saldoAtual: Number(r.saldoAtual ?? 0),
+        pontos: ((r.pontos ?? []) as any[]).map((pt) => ({ label: pt.label, fim: pt.fim, saldo: Number(pt.saldo ?? 0) })),
+        menorSaldo: Number(r.menorSaldo ?? 0), menorLabel: r.menorLabel ?? "", menorFim: r.menorFim ?? "",
+        saldoFinal: Number(r.saldoFinal ?? 0), dataFinal: r.dataFinal ?? "",
+      })
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [weeks])
+  return { data, loading }
 }
