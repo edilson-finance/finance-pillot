@@ -92,3 +92,52 @@ language sql stable set search_path to 'public' as $$
     where c.valor <> 0
   ) s
 $$;
+
+-- Drill-down por dimensao. Base caixa. p_dim: 'categoria'|'centro_custo'|'cliente'|'fornecedor'
+create or replace function public.fn_drilldown(p_start date, p_end date, p_dim text)
+returns json
+language sql stable set search_path to 'public' as $$
+  with cur as (
+    select
+      case p_dim
+        when 'categoria'    then (select name from public.categories   where id = t.category_id)
+        when 'centro_custo' then (select name from public.cost_centers  where id = t.cost_center_id)
+        when 'cliente'      then (select name from public.customers     where id = t.customer_id)
+        when 'fornecedor'   then (select name from public.suppliers     where id = t.supplier_id)
+      end as nome,
+      coalesce(sum(amount) filter (where type = 'entrada'), 0) as receita,
+      coalesce(sum(amount) filter (where type = 'saida'), 0)   as despesa
+    from public.transactions t
+    where t.date between p_start and p_end
+    group by 1
+  ),
+  prev as (
+    select
+      case p_dim
+        when 'categoria'    then (select name from public.categories   where id = t.category_id)
+        when 'centro_custo' then (select name from public.cost_centers  where id = t.cost_center_id)
+        when 'cliente'      then (select name from public.customers     where id = t.customer_id)
+        when 'fornecedor'   then (select name from public.suppliers     where id = t.supplier_id)
+      end as nome,
+      coalesce(sum(amount) filter (where type = 'entrada'), 0)
+        - coalesce(sum(amount) filter (where type = 'saida'), 0) as resultado
+    from public.transactions t
+    where t.date between (p_start - ((p_end - p_start) + 1)) and (p_start - 1)
+    group by 1
+  )
+  select coalesce(json_agg(obj order by ord desc), '[]'::json)
+  from (
+    select (c.receita + c.despesa) as ord,
+      json_build_object(
+        'nome', coalesce(c.nome, '—'),
+        'receita', c.receita,
+        'despesa', c.despesa,
+        'varPct', case when coalesce(p.resultado, 0) <> 0
+                       then round((((c.receita - c.despesa) - p.resultado) / abs(p.resultado)) * 100, 1)
+                       else null end
+      ) as obj
+    from cur c
+    left join prev p on coalesce(p.nome, '') = coalesce(c.nome, '')
+    where (c.receita + c.despesa) <> 0
+  ) s
+$$;
