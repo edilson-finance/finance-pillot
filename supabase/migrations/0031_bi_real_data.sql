@@ -165,3 +165,52 @@ language sql stable set search_path to 'public' as $$
   )
   from cur, prev
 $$;
+
+-- Inadimplencia: vencido nao recebido / total a receber em aberto. Base receivables.
+create or replace function public.fn_inadimplencia(p_today date default current_date)
+returns json
+language sql stable set search_path to 'public' as $$
+  with aberto as (
+    select * from public.receivables
+    where status not in ('recebido', 'recebido_parcial')
+  ),
+  venc as (
+    select *, (p_today - due_date) as dias
+    from aberto where due_date < p_today
+  ),
+  tot as (select coalesce(sum(amount), 0) as total_aberto from aberto),
+  ag as (
+    select case when dias <= 30 then '0–30 dias'
+                when dias <= 60 then '31–60 dias'
+                when dias <= 90 then '61–90 dias'
+                else '+90 dias' end as faixa,
+           sum(amount) as valor, count(*) as qtd
+    from venc group by 1
+  ),
+  meses as (
+    select date_trunc('month', (p_today - (s || ' months')::interval))::date as m
+    from generate_series(6, 0, -1) s
+  ),
+  evo as (
+    select me.m,
+      coalesce(sum(r.amount) filter (
+        where r.status not in ('recebido','recebido_parcial') and r.due_date < p_today), 0) as valor,
+      coalesce(sum(r.amount), 0) as total
+    from meses me
+    left join public.receivables r on date_trunc('month', r.due_date) = me.m
+    group by me.m
+  )
+  select json_build_object(
+    'taxa', round(((select coalesce(sum(amount),0) from venc) / nullif((select total_aberto from tot), 0)) * 100, 1),
+    'valorAtraso', (select coalesce(sum(amount), 0) from venc),
+    'clientesInad', (select count(distinct customer_id) from venc),
+    'prazoMedioDias', (select coalesce(round(avg(dias)), 0) from venc),
+    'aging', (select coalesce(json_agg(json_build_object('faixa', faixa, 'valor', valor, 'qtd', qtd)
+              order by case faixa when '0–30 dias' then 1 when '31–60 dias' then 2
+                                  when '61–90 dias' then 3 else 4 end), '[]'::json) from ag),
+    'evolucao', (select coalesce(json_agg(json_build_object(
+                  'mes', to_char(m, 'TMMon'),
+                  'taxa', round((valor / nullif(total, 0)) * 100, 1),
+                  'valor', valor) order by m), '[]'::json) from evo)
+  )
+$$;
