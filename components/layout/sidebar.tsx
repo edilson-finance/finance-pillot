@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Wallet,
   BarChart3, TrendingUp, FileText, RefreshCw, Activity,
   BrainCircuit, Bell, Settings, Users, Package, LogOut,
-  AlertTriangle, ShieldCheck, Star, ChevronDown,
+  AlertTriangle, ShieldCheck, Star, ChevronDown, Landmark,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useSession, canAccess } from "@/lib/session-context"
@@ -31,6 +31,7 @@ const sections: Section[] = [
     items: [
       { href: "/dashboard",     label: "Dashboard",        icon: LayoutDashboard },
       { href: "/cashflow",      label: "Fluxo de Caixa",   icon: ArrowLeftRight },
+      { href: "/statement",     label: "Extrato de Movimentação", icon: Landmark },
     ],
   },
   {

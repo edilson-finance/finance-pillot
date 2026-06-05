@@ -14,6 +14,7 @@ export interface AppModule {
 export const MODULES: AppModule[] = [
   { key: "dashboard", label: "Dashboard", section: "Principal" },
   { key: "cashflow", label: "Fluxo de Caixa", section: "Principal" },
+  { key: "statement", label: "Extrato de Movimentação", section: "Principal" },
   { key: "payables", label: "Contas a Pagar", section: "Principal" },
   { key: "receivables", label: "Contas a Receber", section: "Principal" },
   { key: "dre", label: "DRE Gerencial", section: "Análise" },
