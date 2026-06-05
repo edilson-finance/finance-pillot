@@ -89,6 +89,11 @@ function EmptyState({ texto }: { texto: string }) {
   )
 }
 
+function fmtDM(iso: string): string {
+  const [, m, d] = iso.split("-")
+  return `${d}/${m}`
+}
+
 const TABS = [
   { id:"visao",          label:"Visão Geral" },
   { id:"liquido",        label:"Valor Líquido" },
@@ -841,37 +846,32 @@ export default function BiPage() {
       {tab==="projecao" && <>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"10px", marginBottom:"16px" }}>
           {[
-            { l:"Saldo Atual",          v:R(284750), c:"var(--accent)" },
-            { l:"Menor Saldo Projetado",v:R(162400), d:"Semana 24/06", c:"var(--warning)" },
-            { l:"Saldo Final Projetado", v:R(295100), d:"30/06/2026",  c:"var(--success)" },
+            { l:"Saldo Atual",           v:R(projection.saldoAtual), d:"", c:"var(--accent)" },
+            { l:"Menor Saldo Projetado", v:R(projection.menorSaldo), d:projection.menorFim ? fmtDM(projection.menorFim) : "", c:projection.menorSaldo<0?"var(--danger)":"var(--warning)" },
+            { l:"Saldo Final Projetado", v:R(projection.saldoFinal), d:projection.dataFinal ? fmtDM(projection.dataFinal) : "", c:projection.saldoFinal>=projection.saldoAtual?"var(--success)":"var(--warning)" },
           ].map(k=>(
             <div key={k.l} style={{ background:"var(--bg-secondary)", border:`1px solid ${k.c}28`, borderLeft:`3px solid ${k.c}`, borderRadius:"var(--radius)", padding:"14px 16px" }}>
               <div style={{ fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",marginBottom:"5px" }}>{k.l}</div>
               <div style={{ fontSize:"20px",fontWeight:800,color:k.c }}>{k.v}</div>
-              {(k as any).d && <div style={{ fontSize:"10px",color:"var(--text-muted)",marginTop:"3px" }}>{(k as any).d}</div>}
+              {k.d && <div style={{ fontSize:"10px",color:"var(--text-muted)",marginTop:"3px" }}>{k.d}</div>}
             </div>
           ))}
         </div>
         <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px", marginBottom:"14px" }}>
-          <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"6px" }}>Projeção de Saldo — 90 dias</div>
+          <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"6px" }}>Projeção de Saldo — {projection.pontos.length} semanas</div>
           <div style={{ display:"flex", gap:"16px", marginBottom:"14px" }}>
-            {[["—",  "Realizado","var(--success)"],["---","Projetado Realista","var(--accent)"],["---","Otimista","var(--purple)"],["---","Pessimista","var(--warning)"]].map(([s,l,c])=>(
+            {[["—","Saldo Atual","var(--success)"],["---","Projetado (realista)","var(--accent)"]].map(([s,l,c])=>(
               <div key={l as string} style={{ display:"flex",alignItems:"center",gap:"5px" }}>
                 <div style={{ width:"24px",height:"2px",background:c as string, borderRadius:"2px" }}/>
                 <span style={{ fontSize:"10px",color:"var(--text-secondary)" }}>{l}</span>
               </div>
             ))}
           </div>
+          {projection.pontos.length === 0 ? <EmptyState texto="Sem dados suficientes para projetar o caixa." /> : (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={[
-              { s:"Mai S3",real:284750,proj:284750,otimista:284750,pessimista:284750 },
-              { s:"Mai S4",real:null,proj:312400,otimista:330000,pessimista:290000 },
-              { s:"Jun S1",real:null,proj:287600,otimista:315000,pessimista:255000 },
-              { s:"Jun S2",real:null,proj:301200,otimista:332000,pessimista:268000 },
-              { s:"Jun S3",real:null,proj:318700,otimista:355000,pessimista:280000 },
-              { s:"Jun S4",real:null,proj:162400,otimista:245000,pessimista:110000 },
-              { s:"Jul S1",real:null,proj:190000,otimista:280000,pessimista:130000 },
-              { s:"Jul S2",real:null,proj:215000,otimista:310000,pessimista:155000 },
+              { label:"Hoje", real:projection.saldoAtual, proj:projection.saldoAtual },
+              ...projection.pontos.map(p=>({ label:p.label, real:null as number|null, proj:p.saldo })),
             ]}>
               <defs>
                 <linearGradient id="projAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -880,25 +880,26 @@ export default function BiPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
-              <XAxis dataKey="s" tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false}/>
+              <XAxis dataKey="label" tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`R$${(v/1000).toFixed(0)}k`}/>
               <Tooltip content={<Tip/>}/>
               <ReferenceLine y={0} stroke="var(--danger)" strokeDasharray="6 3" label={{value:"Zona de risco",fill:"var(--danger)",fontSize:10}}/>
-              <Area type="monotone" dataKey="real"      name="Realizado"  stroke="var(--success)" fill="none"              strokeWidth={2.5}/>
-              <Area type="monotone" dataKey="otimista"  name="Otimista"   stroke="var(--purple)"  fill="none"              strokeWidth={1.5} strokeDasharray="6 4"/>
-              <Area type="monotone" dataKey="pessimista"name="Pessimista" stroke="var(--warning)" fill="none"              strokeWidth={1.5} strokeDasharray="6 4"/>
-              <Area type="monotone" dataKey="proj"      name="Realista"   stroke="var(--accent)"  fill="url(#projAreaGrad)" strokeWidth={2} strokeDasharray="5 3"/>
+              <Area type="monotone" dataKey="real" name="Saldo Atual" stroke="var(--success)" fill="none"              strokeWidth={2.5}/>
+              <Area type="monotone" dataKey="proj" name="Realista"    stroke="var(--accent)"  fill="url(#projAreaGrad)" strokeWidth={2} strokeDasharray="5 3"/>
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </div>
-        <div style={{ background:"var(--warning-soft)", border:"1px solid rgba(245,158,11,0.3)", borderRadius:"var(--radius)", padding:"12px 16px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-            <Info size={14} style={{ color:"var(--warning)", flexShrink:0 }}/>
-            <span style={{ fontSize:"12px",color:"var(--warning)" }}>
-              No cenário realista, o saldo atingirá o menor valor em <strong>semana 24/06 (R$ 162.400)</strong>. Considere antecipar o recebimento de Construtora Beta ou postergar pagamentos não essenciais nessa semana.
-            </span>
+        {projection.menorSaldo < projection.saldoAtual && projection.menorFim && (
+          <div style={{ background:"var(--warning-soft)", border:"1px solid rgba(245,158,11,0.3)", borderRadius:"var(--radius)", padding:"12px 16px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+              <Info size={14} style={{ color:"var(--warning)", flexShrink:0 }}/>
+              <span style={{ fontSize:"12px",color:"var(--warning)" }}>
+                O saldo atingirá o menor valor em <strong>{projection.menorLabel} ({fmtDM(projection.menorFim)}): {R(projection.menorSaldo)}</strong>. Considere antecipar recebimentos ou postergar pagamentos não essenciais nessa semana.
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </>}
     </div>
   )
