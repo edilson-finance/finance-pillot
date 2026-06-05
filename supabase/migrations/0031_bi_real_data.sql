@@ -141,3 +141,27 @@ language sql stable set search_path to 'public' as $$
     where (c.receita + c.despesa) <> 0
   ) s
 $$;
+
+-- Comparativo periodo atual vs anterior (mesma duracao). Base caixa.
+create or replace function public.fn_period_comparison(p_start date, p_end date)
+returns json
+language sql stable set search_path to 'public' as $$
+  with cur as (
+    select coalesce(sum(amount) filter (where type = 'entrada'), 0) as receita,
+           coalesce(sum(amount) filter (where type = 'saida'), 0)   as despesa
+    from public.transactions where date between p_start and p_end
+  ),
+  prev as (
+    select coalesce(sum(amount) filter (where type = 'entrada'), 0) as receita,
+           coalesce(sum(amount) filter (where type = 'saida'), 0)   as despesa
+    from public.transactions
+    where date between (p_start - ((p_end - p_start) + 1)) and (p_start - 1)
+  )
+  select json_build_object(
+    'atual',    json_build_object('receita', cur.receita,  'despesa', cur.despesa,  'resultado', cur.receita - cur.despesa),
+    'anterior', json_build_object('receita', prev.receita, 'despesa', prev.despesa, 'resultado', prev.receita - prev.despesa),
+    'labelAtual',    to_char(p_start, 'DD/MM') || '–' || to_char(p_end, 'DD/MM'),
+    'labelAnterior', to_char((p_start - ((p_end - p_start) + 1)), 'DD/MM') || '–' || to_char((p_start - 1), 'DD/MM')
+  )
+  from cur, prev
+$$;
