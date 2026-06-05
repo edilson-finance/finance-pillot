@@ -34,3 +34,61 @@ language sql stable set search_path to 'public' as $$
   from totals
   order by valor desc
 $$;
+
+-- Quebra por categoria (topo) com filhos e variacao vs janela anterior. Base caixa.
+-- p_kind: 'entrada' | 'saida'
+create or replace function public.fn_category_breakdown(p_start date, p_end date, p_kind text)
+returns json
+language sql stable set search_path to 'public' as $$
+  with k as (select p_kind::txn_type as kind),
+  curtx as (
+    select t.category_id, t.amount
+    from public.transactions t, k
+    where t.type = k.kind and t.date between p_start and p_end
+  ),
+  prevtx as (
+    select t.category_id, t.amount
+    from public.transactions t, k
+    where t.type = k.kind
+      and t.date between (p_start - ((p_end - p_start) + 1)) and (p_start - 1)
+  ),
+  cmap as (
+    select c.id, c.name, coalesce(c.parent_id, c.id) as top_id
+    from public.categories c
+  ),
+  cur as (
+    select cm.top_id, sum(ct.amount) as valor
+    from curtx ct join cmap cm on cm.id = ct.category_id
+    group by cm.top_id
+  ),
+  prev as (
+    select cm.top_id, sum(pt.amount) as valor
+    from prevtx pt join cmap cm on cm.id = pt.category_id
+    group by cm.top_id
+  ),
+  tot as (select coalesce(sum(valor), 0) as g from cur),
+  filhos as (
+    select cm.top_id,
+           case when cm.id = cm.top_id then '(direto)' else cm.name end as nome,
+           sum(ct.amount) as valor
+    from curtx ct join cmap cm on cm.id = ct.category_id
+    group by cm.top_id, case when cm.id = cm.top_id then '(direto)' else cm.name end
+  )
+  select coalesce(json_agg(obj order by ord desc), '[]'::json)
+  from (
+    select c.valor as ord,
+      json_build_object(
+        'id', c.top_id,
+        'categoria', (select name from public.categories where id = c.top_id),
+        'valor', c.valor,
+        'pct', round((c.valor / nullif((select g from tot), 0)) * 100, 1),
+        'varPct', case when coalesce(p.valor, 0) > 0
+                       then round(((c.valor - p.valor) / p.valor) * 100, 1) else null end,
+        'filhos', (select coalesce(json_agg(json_build_object('nome', f.nome, 'valor', f.valor) order by f.valor desc), '[]'::json)
+                   from filhos f where f.top_id = c.top_id and f.valor > 0)
+      ) as obj
+    from cur c
+    left join prev p on p.top_id = c.top_id
+    where c.valor <> 0
+  ) s
+$$;
