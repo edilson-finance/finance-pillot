@@ -65,13 +65,13 @@ export default function StatementPage() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 280px) minmax(180px, 240px) 1fr", gap: "12px", marginBottom: "18px", alignItems: "end" }}>
-        <div>
+      {/* Filtros — flex com wrap para responsividade total */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "18px", alignItems: "flex-end" }}>
+        <div style={{ flex: "1 1 260px", minWidth: "240px" }}>
           <div style={labelStyle}>Período</div>
           <DateRangePicker />
         </div>
-        <div>
+        <div style={{ flex: "1 1 200px", minWidth: "180px" }}>
           <div style={labelStyle}>Conta</div>
           <select style={selectStyle} value={filters.accountId} onChange={(e) => setF({ accountId: e.target.value })}>
             <option value="">Todas as contas</option>
@@ -80,10 +80,10 @@ export default function StatementPage() {
             ))}
           </select>
         </div>
-        <div>
+        <div style={{ flex: "2 1 260px", minWidth: "200px" }}>
           <div style={labelStyle}>Buscar</div>
           <div style={{ position: "relative" }}>
-            <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
             <input
               value={filters.search}
               onChange={(e) => setF({ search: e.target.value })}
@@ -94,8 +94,8 @@ export default function StatementPage() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "20px" }}>
+      {/* KPIs — auto-fit para empilhar em telas menores */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "20px" }}>
         {kpis.map((kpi) => {
           const Icon = kpi.icon
           const display = kpi.signed

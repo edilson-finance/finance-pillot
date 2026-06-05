@@ -204,10 +204,11 @@ export function DateRangePicker() {
           cursor: "pointer",
           transition: "all 0.15s",
           whiteSpace: "nowrap",
+          maxWidth: "100%",
         }}>
         <Calendar size={14} style={{ color: "var(--accent)", flexShrink:0 }} />
-        <span>{range.label}</span>
-        <ChevronDown size={13} style={{ color:"var(--text-muted)", transform: open?"rotate(180deg)":"none", transition:"transform 0.2s" }} />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{range.label}</span>
+        <ChevronDown size={13} style={{ color:"var(--text-muted)", flexShrink:0, transform: open?"rotate(180deg)":"none", transition:"transform 0.2s" }} />
       </button>
 
       {/* Dropdown */}
