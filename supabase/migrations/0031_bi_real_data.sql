@@ -214,3 +214,42 @@ language sql stable set search_path to 'public' as $$
                   'valor', valor) order by m), '[]'::json) from evo)
   )
 $$;
+
+-- Projecao de caixa semanal (so realista). saldo atual + a receber - a pagar por vencimento.
+create or replace function public.fn_cashflow_projection(p_weeks int default 13)
+returns json
+language sql stable set search_path to 'public' as $$
+  with saldo as (
+    select coalesce((select sum(opening_balance) from public.accounts), 0)
+         + coalesce((select sum(case when type = 'entrada' then amount else -amount end)
+                     from public.transactions where date <= current_date), 0) as atual
+  ),
+  weeks as (
+    select gs as wk, (current_date + (gs * 7))::date as fim
+    from generate_series(1, p_weeks) gs
+  ),
+  rec as (
+    select due_date, amount from public.receivables
+    where status not in ('recebido', 'recebido_parcial') and due_date > current_date
+  ),
+  pay as (
+    select due_date, amount from public.payables
+    where status not in ('pago', 'pago_parcial') and due_date > current_date
+  ),
+  pts as (
+    select w.wk, w.fim,
+      (select atual from saldo)
+      + coalesce((select sum(amount) from rec where due_date <= w.fim), 0)
+      - coalesce((select sum(amount) from pay where due_date <= w.fim), 0) as saldo
+    from weeks w
+  )
+  select json_build_object(
+    'saldoAtual', (select atual from saldo),
+    'pontos', (select coalesce(json_agg(json_build_object('label', 'Sem ' || wk, 'fim', fim, 'saldo', saldo) order by wk), '[]'::json) from pts),
+    'menorSaldo', (select min(saldo) from pts),
+    'menorLabel', (select 'Sem ' || wk from pts order by saldo asc limit 1),
+    'menorFim', (select fim from pts order by saldo asc limit 1),
+    'saldoFinal', (select saldo from pts order by wk desc limit 1),
+    'dataFinal', (select fim from pts order by wk desc limit 1)
+  )
+$$;
