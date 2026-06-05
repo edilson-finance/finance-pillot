@@ -331,8 +331,13 @@ export default function BiPage() {
   /* ── Dados filtrados pelo período selecionado ── */
   const { series } = useRevenueSeries(range)
   const { kpis }   = useKpis(range)
-  const { rows: topClients }  = useTopClients()
-  const { rows: topExpenses } = useTopExpenses()
+  const { rows: topClients }  = useTopClients(range)
+  const { rows: topExpenses } = useTopExpenses(range)
+  const { data: periodCmp }   = usePeriodComparison(range)
+  const { data: inad }        = useInadimplencia()
+  const { data: projection }  = useCashflowProjection(13)
+  const [drillDim, setDrillDim] = useState<"categoria"|"centro_custo"|"cliente"|"fornecedor">("categoria")
+  const { rows: drillRows }   = useDrilldown(range, drillDim)
   const days     = daysBetween(range.start, range.end)
 
   const totalReceita  = series.reduce((s,d) => s + d.receita, 0)
@@ -666,26 +671,29 @@ export default function BiPage() {
       {tab==="analise" && <>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px", marginBottom:"14px" }}>
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
-            <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"4px" }}>Período 1 vs Período 2</div>
-            <div style={{ fontSize:"10px",color:"var(--text-muted)",marginBottom:"14px" }}>Abr 2026 vs Mai 2026</div>
+            <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"4px" }}>Período Atual vs Anterior</div>
+            <div style={{ fontSize:"10px",color:"var(--text-muted)",marginBottom:"14px" }}>{periodCmp.labelAnterior} → {periodCmp.labelAtual}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"10px", marginBottom:"16px" }}>
               {[
-                { l:"Receita",  p1:R(289000), p2:R(312000), diff:"+R$23k",   c:"var(--success)" },
-                { l:"Despesa",  p1:R(267000), p2:R(288000), diff:"+R$21k",   c:"var(--danger)" },
-                { l:"Resultado",p1:R(22000),  p2:R(24000),  diff:"+R$2k",    c:"var(--accent)" },
-              ].map(k=>(
+                { l:"Receita",   p1:periodCmp.anterior.receita,   p2:periodCmp.atual.receita,   c:"var(--success)" },
+                { l:"Despesa",   p1:periodCmp.anterior.despesa,   p2:periodCmp.atual.despesa,   c:"var(--danger)" },
+                { l:"Resultado", p1:periodCmp.anterior.resultado, p2:periodCmp.atual.resultado, c:"var(--accent)" },
+              ].map(k=>{
+                const diff = k.p2 - k.p1
+                return (
                 <div key={k.l} style={{ background:"var(--bg-tertiary)",borderRadius:"8px",padding:"10px 12px" }}>
                   <div style={{ fontSize:"10px",color:"var(--text-muted)",marginBottom:"4px" }}>{k.l}</div>
-                  <div style={{ fontSize:"11px",color:"var(--text-secondary)",marginBottom:"2px" }}>Abr: {k.p1}</div>
-                  <div style={{ fontSize:"11px",color:"var(--text-secondary)",marginBottom:"4px" }}>Mai: {k.p2}</div>
-                  <div style={{ fontSize:"13px",fontWeight:800,color:k.c }}>{k.diff}</div>
+                  <div style={{ fontSize:"11px",color:"var(--text-secondary)",marginBottom:"2px" }}>Ant.: {R(k.p1)}</div>
+                  <div style={{ fontSize:"11px",color:"var(--text-secondary)",marginBottom:"4px" }}>Atual: {R(k.p2)}</div>
+                  <div style={{ fontSize:"13px",fontWeight:800,color:k.c }}>{(diff>=0?"+":"-")+"R$"+Math.abs(Math.round(diff/1000))+"k"}</div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={[
-                { p:"Abr 2026", receita:289000, despesa:267000 },
-                { p:"Mai 2026", receita:312000, despesa:288000 },
+                { p:periodCmp.labelAnterior, receita:periodCmp.anterior.receita, despesa:periodCmp.anterior.despesa },
+                { p:periodCmp.labelAtual,    receita:periodCmp.atual.receita,    despesa:periodCmp.atual.despesa },
               ]} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
                 <XAxis dataKey="p" tick={{fill:"var(--text-muted)",fontSize:11}} axisLine={false} tickLine={false}/>
@@ -698,16 +706,25 @@ export default function BiPage() {
           </div>
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Análise Automática de Variação</div>
-            {[
-              { titulo:"Receita cresceu 8,4%", desc:"Crescimento acima da inflação do período (0,4%). Principal driver: Construtora Beta +12,3%.", c:"var(--success)" },
-              { titulo:"Despesas subiram 7,9%", desc:"Crescimento próximo da receita. Folha de pagamento foi o maior componente (+5,2%).", c:"var(--warning)" },
-              { titulo:"Margem melhorou 0,5pp", desc:"Margem líquida passou de 7,6% para 5,9% — piora em relação ao mês anterior por conta das despesas financeiras.", c:"var(--danger)" },
-            ].map((obs,i)=>(
-              <div key={i} style={{ padding:"12px", background:"var(--bg-tertiary)", borderRadius:"8px", borderLeft:`3px solid ${obs.c}`, marginBottom:"10px" }}>
-                <div style={{ fontSize:"12px",fontWeight:700,color:"var(--text-primary)",marginBottom:"4px" }}>{obs.titulo}</div>
-                <div style={{ fontSize:"11px",color:"var(--text-secondary)",lineHeight:1.6 }}>{obs.desc}</div>
-              </div>
-            ))}
+            {(() => {
+              const pctv = (a:number,b:number) => b>0 ? ((a-b)/b)*100 : 0
+              const recVar = pctv(periodCmp.atual.receita, periodCmp.anterior.receita)
+              const despVar = pctv(periodCmp.atual.despesa, periodCmp.anterior.despesa)
+              const margAtual = periodCmp.atual.receita>0 ? (periodCmp.atual.resultado/periodCmp.atual.receita)*100 : 0
+              const margAnt = periodCmp.anterior.receita>0 ? (periodCmp.anterior.resultado/periodCmp.anterior.receita)*100 : 0
+              const fp = (v:number) => (v>=0?"+":"")+v.toFixed(1).replace(".",",")+"%"
+              const fpp = (v:number) => (v>=0?"+":"")+v.toFixed(1).replace(".",",")+"pp"
+              return [
+                { titulo:`Receita ${recVar>=0?"cresceu":"caiu"} ${fp(recVar)}`, desc:`Passou de ${R(periodCmp.anterior.receita)} para ${R(periodCmp.atual.receita)} em relação ao período anterior.`, c:recVar>=0?"var(--success)":"var(--danger)" },
+                { titulo:`Despesas ${despVar>=0?"subiram":"caíram"} ${fp(despVar)}`, desc:`Passaram de ${R(periodCmp.anterior.despesa)} para ${R(periodCmp.atual.despesa)}.`, c:despVar<=recVar?"var(--success)":"var(--warning)" },
+                { titulo:`Margem ${margAtual>=margAnt?"melhorou":"piorou"} ${fpp(margAtual-margAnt)}`, desc:`Margem líquida passou de ${margAnt.toFixed(1)}% para ${margAtual.toFixed(1)}%.`, c:margAtual>=margAnt?"var(--success)":"var(--danger)" },
+              ].map((obs,i)=>(
+                <div key={i} style={{ padding:"12px", background:"var(--bg-tertiary)", borderRadius:"8px", borderLeft:`3px solid ${obs.c}`, marginBottom:"10px" }}>
+                  <div style={{ fontSize:"12px",fontWeight:700,color:"var(--text-primary)",marginBottom:"4px" }}>{obs.titulo}</div>
+                  <div style={{ fontSize:"11px",color:"var(--text-secondary)",lineHeight:1.6 }}>{obs.desc}</div>
+                </div>
+              ))
+            })()}
           </div>
         </div>
       </>}
