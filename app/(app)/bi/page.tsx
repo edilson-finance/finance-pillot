@@ -770,10 +770,10 @@ export default function BiPage() {
       {tab==="inad" && <>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"10px", marginBottom:"16px" }}>
           {[
-            { l:"Taxa de Inadimplência", v:"19,9%",  c:"var(--danger)" },
-            { l:"Valor Total em Atraso",  v:R(51800), c:"var(--danger)" },
-            { l:"Clientes Inadimplentes", v:"5",      c:"var(--warning)" },
-            { l:"Prazo Médio de Atraso",  v:"28 dias",c:"var(--warning)" },
+            { l:"Taxa de Inadimplência", v:`${inad.taxa.toFixed(1).replace(".",",")}%`, c:"var(--danger)" },
+            { l:"Valor Total em Atraso",  v:R(inad.valorAtraso), c:"var(--danger)" },
+            { l:"Clientes Inadimplentes", v:String(inad.clientesInad), c:"var(--warning)" },
+            { l:"Prazo Médio de Atraso",  v:`${inad.prazoMedioDias} dias`, c:"var(--warning)" },
           ].map(k=>(
             <div key={k.l} style={{ background:"var(--bg-secondary)", border:`1px solid ${k.c}28`, borderLeft:`3px solid ${k.c}`, borderRadius:"var(--radius)", padding:"12px 14px" }}>
               <div style={{ fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",marginBottom:"5px" }}>{k.l}</div>
@@ -781,14 +781,14 @@ export default function BiPage() {
             </div>
           ))}
         </div>
+        {inad.valorAtraso === 0 && inad.aging.length === 0 ? (
+          <EmptyState texto="Nenhum título a receber vencido em aberto. Inadimplência zerada." />
+        ) : (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" }}>
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Evolução da Taxa de Inadimplência</div>
-            <div style={{ marginBottom:"8px", padding:"8px 10px", background:"var(--danger-soft)", borderRadius:"7px" }}>
-              <span style={{ fontSize:"11px",color:"var(--danger)" }}>Taxa cresceu 11,7pp em 7 meses. Limite saudável: 5%.</span>
-            </div>
             <ResponsiveContainer width="100%" height={220}>
-              <ComposedChart data={inadData}>
+              <ComposedChart data={inad.evolucao}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
                 <XAxis dataKey="mes" tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false}/>
                 <YAxis yAxisId="taxa" tick={{fill:"var(--text-muted)",fontSize:10}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`}/>
@@ -802,8 +802,9 @@ export default function BiPage() {
           </div>
           <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Aging Report — Tempo em Atraso</div>
+            {inad.aging.length === 0 ? <EmptyState texto="Sem títulos vencidos." /> : <>
             <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={agingData} layout="vertical">
+              <BarChart data={inad.aging} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false}/>
                 <XAxis type="number" hide/>
                 <YAxis type="category" dataKey="faixa" tick={{fill:"var(--text-muted)",fontSize:11}} axisLine={false} tickLine={false} width={90}/>
@@ -821,17 +822,19 @@ export default function BiPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {agingData.map(a=>(
+                  {inad.aging.map(a=>(
                     <TableRow key={a.faixa}
                       cols={[a.faixa, a.valor, `${a.qtd} cobranças`]}
-                      detail={{ "Risco de perda": a.faixa==="+90 dias"?"Alto":"Médio", "Provisão estimada": R(Math.round(a.valor*0.5)) }}
+                      detail={{ "Risco de perda": a.faixa==="+90 dias"?"Alto":"Médio", "% do total em atraso": inad.valorAtraso>0?`${((a.valor/inad.valorAtraso)*100).toFixed(1)}%`:"—" }}
                     />
                   ))}
                 </tbody>
               </table>
             </div>
+            </>}
           </div>
         </div>
+        )}
       </>}
 
       {/* ─── PROJEÇÃO DE CAIXA ─── */}
