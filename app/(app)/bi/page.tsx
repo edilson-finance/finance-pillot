@@ -10,9 +10,11 @@ import { Download, TrendingUp, TrendingDown, Info, Plus, X, Check } from "lucide
 import { useTopClients, useTopExpenses } from "@/lib/analytics-client"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
-import { useRevenueSeries, useKpis } from "@/lib/analytics-client"
+import {
+  useRevenueSeries, useKpis, useCategoryBreakdown, useDrilldown,
+  usePeriodComparison, useInadimplencia, useCashflowProjection,
+} from "@/lib/analytics-client"
 import { daysBetween } from "@/lib/date-utils"
-import { gastoPorCategoria, receitaPorCategoria, GRUPOS_DRE } from "@/lib/accounts-plan"
 
 const R = formatCurrency
 
@@ -79,6 +81,14 @@ function TableRow({ cols, hover, detail }: { cols: (string|number)[]; hover?: st
   )
 }
 
+function EmptyState({ texto }: { texto: string }) {
+  return (
+    <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"40px 18px",textAlign:"center",fontSize:"12.5px",color:"var(--text-muted)" }}>
+      {texto}
+    </div>
+  )
+}
+
 const TABS = [
   { id:"visao",          label:"Visão Geral" },
   { id:"liquido",        label:"Valor Líquido" },
@@ -95,50 +105,19 @@ const TABS = [
 
 const PIE_COLORS = ["var(--accent)","var(--success)","var(--purple)","var(--warning)","var(--danger)","var(--info)"]
 
-const inadData = [
-  { mes:"Nov",taxa:6.8,valor:18400 },{ mes:"Dez",taxa:8.2,valor:22100 },
-  { mes:"Jan",taxa:11.4,valor:29800 },{ mes:"Fev",taxa:14.1,valor:36700 },
-  { mes:"Mar",taxa:16.8,valor:43800 },{ mes:"Abr",taxa:18.2,valor:47400 },
-  { mes:"Mai",taxa:19.9,valor:51800 },
-]
-
-const agingData = [
-  { faixa:"0–30 dias",   valor:12400, qtd:4 },
-  { faixa:"31–60 dias",  valor:28700, qtd:7 },
-  { faixa:"61–90 dias",  valor:14200, qtd:3 },
-  { faixa:"+90 dias",    valor:8300,  qtd:2 },
-]
-
 /* ─── Gastos por Categoria de Despesa ─── */
 function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
   const [sortBy, setSortBy] = useState<"valor"|"pct">("valor")
-  const [detalhe, setDetalhe] = useState<typeof gastoPorCategoria[0]|null>(null)
-  const totalDesp = gastoPorCategoria.reduce((s,c)=>s+c.valor,0)
-  const sorted = [...gastoPorCategoria].sort((a,b)=>sortBy==="valor"?b.valor-a.valor:b.pct-a.pct)
+  const [detalhe, setDetalhe] = useState<string|null>(null)
+  const { rows } = useCategoryBreakdown(range, "saida")
+  const totalDesp = rows.reduce((s,c)=>s+c.valor,0)
+  const sorted = [...rows].sort((a,b)=>sortBy==="valor"?b.valor-a.valor:b.pct-a.pct)
+  const fmtVar = (v:number|null) => v===null ? "—" : (v>=0?"+":"")+v.toFixed(1).replace(".",",")+"%"
 
-  const subcat: Record<string,{nome:string;valor:number}[]> = {
-    "Despesas com Pessoal":[
-      {nome:"Salários e Ordenados",valor:98400},{nome:"Encargos (INSS/FGTS)",valor:26600},
-      {nome:"Benefícios (VT/VR/Saúde)",valor:10800},{nome:"Pró-labore",valor:5600},
-    ],
-    "Despesas Administrativas":[
-      {nome:"Aluguel e Condomínio",valor:8400},{nome:"Honorários Contábeis",valor:24000},
-      {nome:"Telecom e Internet",valor:890},{nome:"Softwares e Sistemas",valor:1240},
-      {nome:"Material de Escritório",valor:1200},{nome:"Manutenção",valor:2800},
-    ],
-    "Custo dos Serviços (CSP)":[
-      {nome:"Materiais e Insumos",valor:62800},{nome:"Subcontratados",valor:41600},
-      {nome:"Fretes",valor:4200},
-    ],
-    "Desp. Comerciais/Marketing":[
-      {nome:"Marketing Digital",valor:2800},{nome:"Comissões",valor:1500},
-      {nome:"Eventos",valor:14600},
-    ],
-  }
+  if (rows.length === 0) return <EmptyState texto="Sem despesas lançadas no período." />
 
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:"14px" }}>
-      {/* Header */}
       <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"14px 18px",display:"flex",alignItems:"center",gap:"14px",flexWrap:"wrap" }}>
         <div>
           <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>Onde o Dinheiro Sai</div>
@@ -152,29 +131,26 @@ function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
       </div>
 
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px" }}>
-        {/* Gráfico de barras horizontal */}
         <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
           <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"16px" }}>Distribuição por Categoria</div>
-          {sorted.map((c,i)=>(
-            <div key={c.categoria} style={{ marginBottom:"14px",cursor:"pointer" }} onClick={()=>setDetalhe(detalhe?.categoria===c.categoria?null:c)}>
+          {sorted.map((c)=>(
+            <div key={c.id} style={{ marginBottom:"14px",cursor:"pointer" }} onClick={()=>setDetalhe(detalhe===c.id?null:c.id)}>
               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"5px" }}>
                 <div style={{ display:"flex",alignItems:"center",gap:"7px" }}>
                   <div style={{ width:"10px",height:"10px",borderRadius:"3px",background:c.cor,flexShrink:0 }}/>
-                  <span style={{ fontSize:"12.5px",color:"var(--text-primary)",fontWeight:detalhe?.categoria===c.categoria?700:400 }}>{c.categoria}</span>
+                  <span style={{ fontSize:"12.5px",color:"var(--text-primary)",fontWeight:detalhe===c.id?700:400 }}>{c.categoria}</span>
                 </div>
                 <div style={{ display:"flex",gap:"12px",alignItems:"center" }}>
                   <span style={{ fontSize:"12px",color:"var(--text-secondary)" }}>{R(c.valor)}</span>
                   <span style={{ fontSize:"12px",fontWeight:700,color:c.cor,minWidth:"40px",textAlign:"right" }}>{c.pct.toFixed(1)}%</span>
-                  <span style={{ fontSize:"10px",color:c.var.startsWith("+")?c.var==="+0,0%"?"var(--text-muted)":"var(--danger)":"var(--success)",background:c.var.startsWith("+")?c.var==="+0,0%"?"var(--bg-tertiary)":"var(--danger-soft)":"var(--success-soft)",padding:"1px 6px",borderRadius:"10px" }}>{c.var}</span>
                 </div>
               </div>
               <div style={{ background:"var(--bg-tertiary)",borderRadius:"4px",height:"7px" }}>
                 <div style={{ height:"100%",borderRadius:"4px",background:c.cor,width:`${c.pct}%`,transition:"width 0.3s" }}/>
               </div>
-              {/* Sub-categorias ao clicar */}
-              {detalhe?.categoria===c.categoria && subcat[c.categoria] && (
+              {detalhe===c.id && c.filhos.length>0 && (
                 <div style={{ marginTop:"8px",paddingLeft:"17px",borderLeft:`2px solid ${c.cor}` }}>
-                  {subcat[c.categoria].map(s=>(
+                  {c.filhos.map(s=>(
                     <div key={s.nome} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:"11.5px" }}>
                       <span style={{ color:"var(--text-secondary)" }}>{s.nome}</span>
                       <span style={{ fontWeight:600,color:"var(--text-primary)" }}>{R(s.valor)}</span>
@@ -186,11 +162,9 @@ function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
           ))}
         </div>
 
-        {/* Relatório detalhado */}
         <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
           <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"6px" }}>Relatório de Gastos</div>
-          <div style={{ fontSize:"10px",color:"var(--text-muted)",marginBottom:"14px" }}>Clique em uma categoria para ver subcategorias</div>
-
+          <div style={{ fontSize:"10px",color:"var(--text-muted)",marginBottom:"14px" }}>Clique numa categoria no gráfico para ver subcategorias</div>
           <table style={{ width:"100%",borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ borderBottom:"2px solid var(--border)" }}>
@@ -201,9 +175,9 @@ function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
             </thead>
             <tbody>
               {sorted.map(c=>(
-                <TableRow key={c.categoria}
-                  cols={[c.categoria, c.valor, `${c.pct.toFixed(1)}%`, `${((c.valor/Math.max(kpis.faturamento,1))*100).toFixed(1)}%`, c.var]}
-                  detail={{ "Valor no período": R(c.valor), "% do total despesas": `${c.pct.toFixed(1)}%`, "% da receita": `${((c.valor/Math.max(kpis.faturamento,1))*100).toFixed(1)}%`, "Variação": c.var }}
+                <TableRow key={c.id}
+                  cols={[c.categoria, c.valor, `${c.pct.toFixed(1)}%`, `${((c.valor/Math.max(kpis.faturamento,1))*100).toFixed(1)}%`, fmtVar(c.varPct)]}
+                  detail={{ "Valor no período": R(c.valor), "% do total despesas": `${c.pct.toFixed(1)}%`, "% da receita": `${((c.valor/Math.max(kpis.faturamento,1))*100).toFixed(1)}%`, "Variação": fmtVar(c.varPct) }}
                 />
               ))}
               <tr style={{ borderTop:"2px solid var(--border)",background:"var(--bg-tertiary)" }}>
@@ -215,35 +189,29 @@ function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
               </tr>
             </tbody>
           </table>
-
-          {/* Insight automático */}
-          <div style={{ marginTop:"14px",padding:"12px",background:"var(--danger-soft)",borderRadius:"8px" }}>
-            <div style={{ fontSize:"12px",fontWeight:700,color:"var(--danger)",marginBottom:"4px" }}>Onde está o maior custo</div>
-            <div style={{ fontSize:"11.5px",color:"var(--text-secondary)",lineHeight:1.6 }}>
-              <strong>Despesas com Pessoal</strong> representam {gastoPorCategoria[0].pct.toFixed(0)}% de todos os gastos ({R(gastoPorCategoria[0].valor)}).
-              Para reduzir custos, avaliar otimização de benefícios ou contratação PJ pode gerar economia de 15–20% nessa categoria.
+          {sorted[0] && (
+            <div style={{ marginTop:"14px",padding:"12px",background:"var(--danger-soft)",borderRadius:"8px" }}>
+              <div style={{ fontSize:"12px",fontWeight:700,color:"var(--danger)",marginBottom:"4px" }}>Onde está o maior custo</div>
+              <div style={{ fontSize:"11.5px",color:"var(--text-secondary)",lineHeight:1.6 }}>
+                <strong>{sorted[0].categoria}</strong> representa {sorted[0].pct.toFixed(0)}% de todos os gastos ({R(sorted[0].valor)}) no período.
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Treemap visual */}
       <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
         <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"14px" }}>Proporção Visual dos Gastos</div>
         <div style={{ display:"flex",height:"80px",borderRadius:"8px",overflow:"hidden",gap:"2px" }}>
           {sorted.map(c=>(
-            <div key={c.categoria} title={`${c.categoria}: ${R(c.valor)} (${c.pct.toFixed(1)}%)`} style={{
-              flex:`${c.pct}`,background:c.cor,display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:"10px",fontWeight:700,color:"#fff",overflow:"hidden",cursor:"pointer",
-              transition:"flex 0.3s",
-            }}>
+            <div key={c.id} title={`${c.categoria}: ${R(c.valor)} (${c.pct.toFixed(1)}%)`} style={{ flex:`${c.pct}`,background:c.cor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",fontWeight:700,color:"#fff",overflow:"hidden",cursor:"pointer",transition:"flex 0.3s" }}>
               {c.pct > 8 && c.pct.toFixed(0)+"%"}
             </div>
           ))}
         </div>
         <div style={{ display:"flex",gap:"14px",marginTop:"10px",flexWrap:"wrap" }}>
           {sorted.map(c=>(
-            <div key={c.categoria} style={{ display:"flex",alignItems:"center",gap:"5px" }}>
+            <div key={c.id} style={{ display:"flex",alignItems:"center",gap:"5px" }}>
               <div style={{ width:"10px",height:"10px",borderRadius:"2px",background:c.cor,flexShrink:0 }}/>
               <span style={{ fontSize:"11px",color:"var(--text-secondary)" }}>{c.categoria.split(" ")[0]} ({c.pct.toFixed(1)}%)</span>
             </div>
@@ -255,21 +223,13 @@ function CatDespesas({ range, kpis }: { range: any; kpis: any }) {
 }
 
 /* ─── Categorias de Entradas (Receitas) ─── */
-function CatReceitas({ range, kpis }: { range: any; kpis: any }) {
-  const [showForm, setShowForm] = useState(false)
-  const [catNome, setCatNome] = useState("")
-  const [cats, setCats] = useState(receitaPorCategoria)
-  const totalRec = cats.reduce((s,c)=>s+c.valor,0)
+function CatReceitas({ range }: { range: any }) {
+  const { rows } = useCategoryBreakdown(range, "entrada")
+  const totalRec = rows.reduce((s,c)=>s+c.valor,0)
+  const fmtVar = (v:number|null) => v===null ? "—" : (v>=0?"+":"")+v.toFixed(1).replace(".",",")+"%"
+  const top = rows[0]
 
-  const subcat: Record<string,{cliente:string;valor:number}[]> = {
-    "Prestação de Serviços":[
-      {cliente:"Construtora Beta",valor:150000},{cliente:"J. Silva Empreend.",valor:48000},
-      {cliente:"Grupo Horizonte",valor:42000},{cliente:"Outros",valor:8000},
-    ],
-    "Contratos Mensais":[
-      {cliente:"J. Silva Empreend.",valor:50000},{cliente:"RJ Incorporadora",valor:14000},
-    ],
-  }
+  if (rows.length === 0) return <EmptyState texto="Sem receitas lançadas no período." />
 
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:"14px" }}>
@@ -278,26 +238,13 @@ function CatReceitas({ range, kpis }: { range: any; kpis: any }) {
           <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>De Onde Vem o Dinheiro</div>
           <div style={{ fontSize:"11px",color:"var(--text-muted)",marginTop:"1px" }}>{range.label} · Total recebido: {R(totalRec)}</div>
         </div>
-        <button onClick={()=>setShowForm(o=>!o)} style={{ marginLeft:"auto",display:"flex",alignItems:"center",gap:"5px",padding:"7px 14px",background:"var(--success)",border:"none",borderRadius:"7px",fontSize:"12px",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>
-          <Plus size={12}/> Nova categoria de receita
-        </button>
       </div>
 
-      {/* Formulário nova categoria */}
-      {showForm && (
-        <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--success)40",borderRadius:"var(--radius)",padding:"16px 18px",display:"flex",alignItems:"center",gap:"12px" }}>
-          <input value={catNome} onChange={e=>setCatNome(e.target.value)} placeholder="Nome da nova categoria de receita (ex: Assessoria Técnica)" style={{ flex:1,padding:"9px 12px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }}/>
-          <button onClick={()=>{ if(catNome.trim()){setCats(p=>[...p,{categoria:catNome.trim(),valor:0,pct:0,var:"Novo",cor:"#10B981"}]);setCatNome("");setShowForm(false)} }} style={{ padding:"9px 18px",background:"var(--success)",border:"none",borderRadius:"6px",fontSize:"12px",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>Criar</button>
-          <button onClick={()=>setShowForm(false)} style={{ width:"32px",height:"32px",borderRadius:"6px",border:"1px solid var(--border)",background:"var(--bg-tertiary)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"var(--text-muted)" }}><X size={14}/></button>
-        </div>
-      )}
-
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px" }}>
-        {/* Barras de categoria */}
         <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
           <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"16px" }}>Receita por Categoria</div>
-          {cats.filter(c=>c.valor>0).map((c,i)=>(
-            <div key={c.categoria} style={{ marginBottom:"16px" }}>
+          {rows.map((c)=>(
+            <div key={c.id} style={{ marginBottom:"16px" }}>
               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"5px" }}>
                 <div style={{ display:"flex",alignItems:"center",gap:"7px" }}>
                   <div style={{ width:"10px",height:"10px",borderRadius:"3px",background:c.cor,flexShrink:0 }}/>
@@ -311,11 +258,11 @@ function CatReceitas({ range, kpis }: { range: any; kpis: any }) {
               <div style={{ background:"var(--bg-tertiary)",borderRadius:"4px",height:"7px" }}>
                 <div style={{ height:"100%",borderRadius:"4px",background:c.cor,width:`${c.pct}%` }}/>
               </div>
-              {subcat[c.categoria] && (
+              {c.filhos.length>0 && (
                 <div style={{ marginTop:"6px",paddingLeft:"17px",borderLeft:`2px solid ${c.cor}40` }}>
-                  {subcat[c.categoria].map(s=>(
-                    <div key={s.cliente} style={{ display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:"11px" }}>
-                      <span style={{ color:"var(--text-muted)" }}>{s.cliente}</span>
+                  {c.filhos.map(s=>(
+                    <div key={s.nome} style={{ display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:"11px" }}>
+                      <span style={{ color:"var(--text-muted)" }}>{s.nome}</span>
                       <span style={{ color:"var(--text-secondary)",fontWeight:600 }}>{R(s.valor)}</span>
                     </div>
                   ))}
@@ -323,21 +270,9 @@ function CatReceitas({ range, kpis }: { range: any; kpis: any }) {
               )}
             </div>
           ))}
-          {cats.filter(c=>c.valor===0).length > 0 && (
-            <div style={{ padding:"10px 12px",background:"var(--bg-tertiary)",borderRadius:"7px",fontSize:"11px",color:"var(--text-muted)" }}>
-              {cats.filter(c=>c.valor===0).map(c=>(
-                <div key={c.categoria} style={{ display:"flex",justifyContent:"space-between",padding:"2px 0" }}>
-                  <span>{c.categoria}</span>
-                  <span>R$ 0 — sem lançamentos</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Relatório e insights */}
         <div style={{ display:"flex",flexDirection:"column",gap:"12px" }}>
-          {/* Tabela */}
           <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)",marginBottom:"12px" }}>Tabela de Receitas por Categoria</div>
             <table style={{ width:"100%",borderCollapse:"collapse" }}>
@@ -349,43 +284,40 @@ function CatReceitas({ range, kpis }: { range: any; kpis: any }) {
                 </tr>
               </thead>
               <tbody>
-                {cats.map((c,i)=>(
-                  <tr key={c.categoria} style={{ borderBottom:"1px solid var(--border)" }}
+                {rows.map((c)=>(
+                  <tr key={c.id} style={{ borderBottom:"1px solid var(--border)" }}
                     onMouseEnter={e=>(e.currentTarget.style.background="var(--bg-tertiary)")}
                     onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
                     <td style={{ padding:"9px 10px",fontSize:"12.5px",fontWeight:500,color:"var(--text-primary)",display:"flex",alignItems:"center",gap:"7px" }}>
                       <div style={{ width:"8px",height:"8px",borderRadius:"2px",background:c.cor,flexShrink:0 }}/>
                       {c.categoria}
                     </td>
-                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12.5px",fontWeight:700,color:"var(--success)" }}>{c.valor>0?R(c.valor):"—"}</td>
-                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12px",color:"var(--text-secondary)" }}>{c.pct>0?`${c.pct.toFixed(1)}%`:"—"}</td>
-                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"11px",color:c.var.startsWith("+")?"var(--success)":c.var==="—"?"var(--text-muted)":"var(--danger)",fontWeight:600 }}>{c.var}</td>
+                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12.5px",fontWeight:700,color:"var(--success)" }}>{R(c.valor)}</td>
+                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12px",color:"var(--text-secondary)" }}>{c.pct.toFixed(1)}%</td>
+                    <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"11px",color:c.varPct===null?"var(--text-muted)":c.varPct>=0?"var(--success)":"var(--danger)",fontWeight:600 }}>{fmtVar(c.varPct)}</td>
                   </tr>
                 ))}
                 <tr style={{ borderTop:"2px solid var(--border)",background:"var(--bg-tertiary)" }}>
                   <td style={{ padding:"9px 10px",fontSize:"13px",fontWeight:800,color:"var(--text-primary)" }}>TOTAL</td>
                   <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"13px",fontWeight:800,color:"var(--success)" }}>{R(totalRec)}</td>
                   <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12px",fontWeight:700,color:"var(--text-primary)" }}>100%</td>
-                  <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12px",color:"var(--success)" }}>+8,4%</td>
+                  <td style={{ padding:"9px 10px",textAlign:"right",fontSize:"12px",color:"var(--text-muted)" }}>—</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {/* Insights */}
-          <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"16px" }}>
-            <div style={{ fontSize:"12px",fontWeight:700,color:"var(--text-primary)",marginBottom:"10px" }}>Análise Automática</div>
-            {[
-              { c:"var(--warning)", t:"Concentração de receita", d:"79,5% da receita vem de Prestação de Serviços. Diversificar com mais contratos mensais recorrentes reduz risco e melhora previsibilidade." },
-              { c:"var(--success)", t:"Contratos mensais crescendo", d:"Receita recorrente representa 20,5%. Cada 10% adicional de receita recorrente reduz a volatilidade de caixa em ~25%." },
-              { c:"var(--accent)",  t:"Oportunidade identificada", d:"As categorias 'Receita de Locações' e 'Venda de Mercadorias' estão zeradas. Se aplicáveis ao negócio, podem ser fontes complementares de receita." },
-            ].map((obs,i)=>(
-              <div key={i} style={{ padding:"10px 12px",background:"var(--bg-tertiary)",borderRadius:"7px",borderLeft:`3px solid ${obs.c}`,marginBottom:i<2?"8px":0 }}>
-                <div style={{ fontSize:"11.5px",fontWeight:700,color:obs.c,marginBottom:"3px" }}>{obs.t}</div>
-                <div style={{ fontSize:"11px",color:"var(--text-secondary)",lineHeight:1.6 }}>{obs.d}</div>
+          {top && (
+            <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"16px" }}>
+              <div style={{ fontSize:"12px",fontWeight:700,color:"var(--text-primary)",marginBottom:"10px" }}>Análise Automática</div>
+              <div style={{ padding:"10px 12px",background:"var(--bg-tertiary)",borderRadius:"7px",borderLeft:`3px solid var(--warning)` }}>
+                <div style={{ fontSize:"11.5px",fontWeight:700,color:"var(--warning)",marginBottom:"3px" }}>Concentração de receita</div>
+                <div style={{ fontSize:"11px",color:"var(--text-secondary)",lineHeight:1.6 }}>
+                  {top.pct.toFixed(1)}% da receita vem de <strong>{top.categoria}</strong>. Diversificar reduz risco e melhora a previsibilidade de caixa.
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -678,7 +610,7 @@ export default function BiPage() {
       </>}
 
       {/* ─── CATEGORIAS DE ENTRADAS ─── */}
-      {tab==="cat_receitas" && <CatReceitas range={range} kpis={kpis}/>}
+      {tab==="cat_receitas" && <CatReceitas range={range}/>}
 
       {/* ─── GASTOS POR CATEGORIA ─── */}
       {tab==="cat_despesas" && <CatDespesas range={range} kpis={kpis}/>}
