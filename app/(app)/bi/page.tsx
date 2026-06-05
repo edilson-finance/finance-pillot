@@ -732,37 +732,37 @@ export default function BiPage() {
       {/* ─── DRILL-DOWN ─── */}
       {tab==="drilldown" && <>
         <div style={{ background:"var(--bg-secondary)", border:"1px solid var(--border)", borderRadius:"var(--radius)", padding:"18px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"16px", flexWrap:"wrap" }}>
             <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>Drill-down por Dimensão</div>
-            <div style={{ display:"flex", gap:"6px", marginLeft:"auto" }}>
-              {["Categoria","Centro de Custo","Cliente","Fornecedor"].map(d=>(
-                <button key={d} style={{ padding:"5px 12px", border:"1px solid var(--border)", borderRadius:"6px", background:"var(--bg-tertiary)", fontSize:"11px", color:"var(--text-secondary)", cursor:"pointer", fontFamily:"inherit" }}>{d}</button>
+            <div style={{ display:"flex", gap:"6px", marginLeft:"auto", flexWrap:"wrap" }}>
+              {([["categoria","Categoria"],["centro_custo","Centro de Custo"],["cliente","Cliente"],["fornecedor","Fornecedor"]] as const).map(([dim,label])=>(
+                <button key={dim} onClick={()=>setDrillDim(dim)} style={{ padding:"5px 12px", border:"1px solid", borderColor:drillDim===dim?"var(--accent)":"var(--border)", borderRadius:"6px", background:drillDim===dim?"var(--accent-soft)":"var(--bg-tertiary)", fontSize:"11px", color:drillDim===dim?"var(--accent)":"var(--text-secondary)", fontWeight:drillDim===dim?700:400, cursor:"pointer", fontFamily:"inherit" }}>{label}</button>
               ))}
             </div>
           </div>
+          {drillRows.length === 0 ? <EmptyState texto="Sem lançamentos no período para esta dimensão." /> : (
           <table style={{ width:"100%",borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ borderBottom:"2px solid var(--border)" }}>
-                {["Categoria","Receita","Despesa","Resultado","% Receita","Variação"].map(h=>(
-                  <th key={h} style={{ padding:"9px 14px",textAlign:h==="Categoria"?"left":"right",fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.4px",fontWeight:700,background:"var(--bg-tertiary)" }}>{h}</th>
+                {["Nome","Receita","Despesa","Resultado","% Receita","Variação"].map(h=>(
+                  <th key={h} style={{ padding:"9px 14px",textAlign:h==="Nome"?"left":"right",fontSize:"10px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.4px",fontWeight:700,background:"var(--bg-tertiary)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {[
-                { cat:"Obras",        rec:248000, desp:142000, var:"+8,1%" },
-                { cat:"Contratos",    rec:64000,  desp:18000,  var:"+2,4%" },
-                { cat:"Serviços",     rec:0,      desp:28000,  var:"-1,2%" },
-                { cat:"Administrativo",rec:0,     desp:42000,  var:"+3,8%" },
-                { cat:"Financeiro",   rec:0,      desp:17200,  var:"+12,4%" },
-              ].map(r=>(
-                <TableRow key={r.cat}
-                  cols={[r.cat, r.rec>0?r.rec:"—", r.desp, r.rec-r.desp, r.rec>0?`${((r.rec/312000)*100).toFixed(1)}%`:"—", r.var]}
-                  detail={{ "Margem bruta": r.rec>0?`${(((r.rec-r.desp)/r.rec)*100).toFixed(1)}%`:"—", "Variação": r.var, "Participação": r.rec>0?`${((r.rec/312000)*100).toFixed(1)}%`:"—" }}
-                />
-              ))}
+              {(() => {
+                const totalRec = drillRows.reduce((s,r)=>s+r.receita,0)
+                const fv = (v:number|null) => v===null ? "—" : (v>=0?"+":"")+v.toFixed(1).replace(".",",")+"%"
+                return drillRows.map(r=>(
+                  <TableRow key={r.nome}
+                    cols={[r.nome, r.receita>0?r.receita:"—", r.despesa, r.receita-r.despesa, totalRec>0?`${((r.receita/totalRec)*100).toFixed(1)}%`:"—", fv(r.varPct)]}
+                    detail={{ "Margem bruta": r.receita>0?`${(((r.receita-r.despesa)/r.receita)*100).toFixed(1)}%`:"—", "Variação resultado": fv(r.varPct), "Participação receita": totalRec>0?`${((r.receita/totalRec)*100).toFixed(1)}%`:"—" }}
+                  />
+                ))
+              })()}
             </tbody>
           </table>
+          )}
         </div>
       </>}
 
