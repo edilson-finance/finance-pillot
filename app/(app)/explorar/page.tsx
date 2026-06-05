@@ -19,8 +19,8 @@ const CHART_COLORS = ["var(--accent)", "var(--success)", "var(--purple)", "var(-
 
 export default function ExplorarPage() {
   const { range } = useDateRange()
-  const { rows: topClients } = useTopClients()
-  const { rows: topExpenses } = useTopExpenses()
+  const { rows: topClients } = useTopClients(range)
+  const { rows: topExpenses } = useTopExpenses(range)
   const { series: revenueExpenseData } = useRevenueSeries(range)
 
   const [dimensaoKey, setDimensaoKey] = useState("despesas")
