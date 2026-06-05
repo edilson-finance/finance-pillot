@@ -126,8 +126,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    e heatmaps de 7 colunas, que NÃO devem empilhar.
 ───────────────────────────────────────────── */
 
-/* Tablet: grids densos de cards (4/5/6 colunas) caem para 2 colunas */
+/* Guards globais: nenhum filho de grid pode estourar a própria coluna
+   (min-width:auto é o padrão e causa overflow horizontal). E controles de
+   formulário nunca passam da largura do contêiner. */
+main [style*="grid-template-columns"] > * { min-width: 0; }
+main select,
+main input,
+main textarea { max-width: 100%; }
+/* Imagens/medias fluidas. */
+main img, main svg, main canvas, main video { max-width: 100%; }
+
+/* Desktop pequeno: grids muito densos (5/6 colunas) caem para 3 colunas. */
+@media (max-width: 1200px) {
+  main [style*="repeat(5"],
+  main [style*="repeat(6"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Tablet: grids densos de cards (3/4/5/6 colunas) caem para 2 colunas. */
 @media (max-width: 1024px) {
+  main [style*="repeat(3"],
   main [style*="repeat(4"],
   main [style*="repeat(5"],
   main [style*="repeat(6"] {
@@ -135,7 +154,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* Celular: empilha praticamente tudo em 1 coluna (exceto grids de 7 col) */
+/* Tablet estreito: shells de 2 colunas (sidebar + conteúdo, em px ou fr)
+   empilham. Pega grids que NÃO usam repeat() — ex.: "260px 1fr", "1fr 380px",
+   "2fr 1fr" — e os transforma em coluna única. Calendário (repeat(7)) intacto. */
+@media (max-width: 860px) {
+  main [style*="grid-template-columns"]:not([style*="repeat("]) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Celular: empilha praticamente tudo em 1 coluna (exceto grids de 7 col). */
 @media (max-width: 640px) {
   main [style*="grid-template-columns"]:not([style*="repeat(7"]) {
     grid-template-columns: 1fr !important;
