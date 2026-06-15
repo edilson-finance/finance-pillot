@@ -104,7 +104,7 @@ export default function HealthPage() {
       </div>
 
       {/* Score principal */}
-      <div style={{ background:"var(--bg-secondary)",border:`1px solid ${scoreConf.color}30`,borderRadius:"var(--radius)",padding:"22px",marginBottom:"18px",display:"flex",alignItems:"center",gap:"24px" }}>
+      <div className="health-hero" style={{ background:"var(--bg-secondary)",border:`1px solid ${scoreConf.color}30`,borderRadius:"var(--radius)",padding:"22px",marginBottom:"18px",display:"flex",alignItems:"center",gap:"24px" }}>
         <ScoreCircle score={healthScore} config={scoreConf}/>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:"16px",fontWeight:800,color:"var(--text-primary)",marginBottom:"6px" }}>
@@ -114,7 +114,7 @@ export default function HealthPage() {
             Com base nos dados de {range.label}, foram avaliadas 10 dimensões financeiras. Os pontos críticos são inadimplência ({kpis.inadimplencia}%) e concentração de receita (top 3 clientes = 93%). O caixa está saudável, mas o lucro líquido ({kpis.lucroMargin}%) está abaixo da meta de 10%.
           </p>
         </div>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",minWidth:"180px" }}>
+        <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",minWidth:"180px" }}>
           {Object.entries(statusConfig).map(([k,s])=>(
             <div key={k} style={{ background:"var(--bg-tertiary)",borderRadius:"8px",padding:"10px",textAlign:"center" }}>
               <div style={{ fontSize:"22px",fontWeight:800,color:s.color }}>{healthDimensions.filter(d=>d.status===k).length}</div>

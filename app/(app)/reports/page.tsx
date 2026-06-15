@@ -6,6 +6,7 @@ import {
   AlertTriangle, Users, Truck, RefreshCw, Filter, Eye,
 } from "lucide-react"
 import { useDateRange } from "@/lib/date-context"
+import { useMobileNav } from "@/lib/mobile-nav"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { useReportsData } from "@/lib/reports-data"
 import {
@@ -41,6 +42,7 @@ const selectStyle: React.CSSProperties = {
 
 export default function ReportsPage() {
   const { range } = useDateRange()
+  const { isMobile } = useMobileNav()
   const [selected, setSelected] = useState<ReportId>("dre")
   const [showPreview, setShowPreview] = useState(false)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
@@ -217,6 +219,26 @@ export default function ReportsPage() {
               </div>
 
               {hasRows ? (
+                isMobile ? (
+                  /* Mobile: cada linha do relatório vira um card (1ª coluna = título, demais = rótulo→valor) */
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "12px" }}>
+                    {report.rows.map((row, i) => (
+                      <div key={i} style={{ background: row.bold ? "var(--accent-soft)" : "var(--bg-secondary)", border: "1px solid var(--border)", borderLeft: `3px solid ${row.bold ? "var(--accent)" : "var(--border)"}`, borderRadius: "var(--radius)", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ fontSize: "13.5px", fontWeight: row.bold ? 800 : 700, color: "var(--text-primary)" }}>{report.columns[0].value(row)}</div>
+                        {report.columns.length > 1 && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                            {report.columns.slice(1).map((c) => (
+                              <div key={c.header} style={{ display: "flex", justifyContent: "space-between", gap: "12px", fontSize: "12px" }}>
+                                <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{c.header}</span>
+                                <span style={{ color: "var(--text-primary)", fontWeight: row.bold || c.align === "right" ? 700 : 500, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{c.value(row)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -239,6 +261,7 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                 </div>
+                )
               ) : (
                 <div style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
                   <BarChart2 size={32} style={{ marginBottom: "8px", opacity: 0.4 }} />

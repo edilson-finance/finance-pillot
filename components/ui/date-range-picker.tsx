@@ -189,7 +189,7 @@ export function DateRangePicker() {
   const fmtInput = (d: Date | null) => d ? d.toLocaleDateString("pt-BR") : ""
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} style={{ position: "relative", minWidth: 0 }}>
       {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}

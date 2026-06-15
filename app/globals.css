@@ -165,7 +165,7 @@ main img, main svg, main canvas, main video { max-width: 100%; }
 
 /* Celular: empilha praticamente tudo em 1 coluna (exceto grids de 7 col). */
 @media (max-width: 640px) {
-  main [style*="grid-template-columns"]:not([style*="repeat(7"]) {
+  main [style*="grid-template-columns"]:not([style*="repeat(7"]):not(.kpi-grid) {
     grid-template-columns: 1fr !important;
   }
   /* reduz respiro lateral das páginas no celular */
@@ -176,6 +176,24 @@ main img, main svg, main canvas, main video { max-width: 100%; }
    em vez de estourar a página inteira. */
 @media (max-width: 900px) {
   main { overflow-x: auto; }
+}
+
+/* ─────────────────────────────────────────
+   Ajustes mobile por classe (componentes que usam flex e escapam da
+   camada de grid acima). Declarados DEPOIS das regras globais de grid
+   para vencer o empate de especificidade (mesma 0,1,1 + !important).
+───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Barra de status da dashboard: é flex (não grid), então empilha por classe. */
+  main .dash-status { flex-direction: column !important; align-items: flex-start !important; gap: 9px !important; }
+  main .dash-status-actions { width: 100%; }
+  /* Grids de KPIs/métricas: 2 colunas no celular (mais escaneável que 1 coluna).
+     Especificidade (0,3,1) para vencer a regra global de colapso (0,2,1). */
+  main [style*="grid-template-columns"].kpi-grid:not([style*="repeat(7"]) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  /* Saúde Financeira: card "hero" (medidor + texto + contadores) empilha no celular,
+     em vez de espremer o texto numa coluna estreita. */
+  main .health-hero { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+  main .health-hero > div:nth-child(2), main .health-hero > div:last-child { width: 100%; }
 }
 
 /* Spinner de carregamento (ex.: processamento de extrato OFX). */

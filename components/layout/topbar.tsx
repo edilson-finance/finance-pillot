@@ -74,7 +74,7 @@ export function Topbar() {
       gap: "8px",
     }}>
       {/* Left: hambúrguer (mobile) + date picker */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
         {isMobile && (
           <button
             onClick={() => setOpen(true)}
@@ -94,7 +94,7 @@ export function Topbar() {
       </div>
 
       {/* Right */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
         {/* Theme */}
         <button
           onClick={toggleTheme}
@@ -138,8 +138,11 @@ export function Topbar() {
             disabled={switching}
             title={hasMultiple ? "Trocar de empresa" : session.companyName}
             style={{
-              display: "flex", alignItems: "center", gap: "7px",
-              padding: "4px 10px",
+              display: "flex", alignItems: "center", gap: isMobile ? "0" : "7px",
+              padding: isMobile ? "0" : "4px 10px",
+              width: isMobile ? "32px" : undefined,
+              height: isMobile ? "32px" : undefined,
+              justifyContent: "center",
               background: "var(--bg-tertiary)",
               border: "1px solid var(--border)",
               borderRadius: "var(--radius-sm)",
@@ -149,16 +152,18 @@ export function Topbar() {
               opacity: switching ? 0.6 : 1,
             }}>
             <div style={{
-              width: "22px", height: "22px",
+              width: "22px", height: "22px", flexShrink: 0,
               background: "var(--accent-soft)",
               borderRadius: "5px",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "9px", fontWeight: 800, color: "var(--accent)",
             }}>{companyInitials || "EM"}</div>
-            <span style={{ maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {session.companyName}
-            </span>
-            {hasMultiple && (
+            {!isMobile && (
+              <span style={{ maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {session.companyName}
+              </span>
+            )}
+            {!isMobile && hasMultiple && (
               <ChevronDown size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
             )}
           </button>

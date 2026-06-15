@@ -6,6 +6,7 @@ import { Plus, Search, Check, Edit2, X, AlertCircle, Trash2 } from "lucide-react
 import Link from "next/link"
 import type { Receivable } from "@/lib/db/receivables"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { useMobileNav } from "@/lib/mobile-nav"
 import { createReceivable, updateReceivable, deleteReceivable, markReceived } from "./actions"
 import { FormReceita, type Options } from "../transactions/transactions-client"
 
@@ -58,6 +59,8 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   products: Prod[]
 }) {
   const router = useRouter()
+  // Mobile: lista vira cards (ver bloco isMobile abaixo) em vez da tabela cortada.
+  const { isMobile } = useMobileNav()
   const [filter, setFilter] = useState("todos")
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
@@ -222,7 +225,74 @@ export default function ReceivablesClient({ receivables, customers, categories, 
         ))}
       </div>
 
-      {/* Table */}
+      {/* Tabela (desktop) / Cards (mobile) */}
+      {isMobile ? (
+        <div style={{ display:"flex",flexDirection:"column",gap:"10px" }}>
+          {filtered.length===0 && (
+            <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"32px 18px",textAlign:"center",fontSize:"12.5px",color:"var(--text-muted)" }}>
+              Nenhuma cobrança encontrada para este filtro.
+            </div>
+          )}
+          {filtered.map((item)=>{
+            const sc = stCfg[effReceivableStatus(item.due_date, item.status)] ?? { label:item.status, c:"var(--text-muted)", bg:"var(--bg-tertiary)" }
+            const dias = item.status === "recebido" ? 0 : daysOverdue(item.due_date)
+            return (
+              <div key={item.id} style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderLeft:`3px solid ${sc.c}`,borderRadius:"var(--radius)",padding:"13px 14px",display:"flex",flexDirection:"column",gap:"11px" }}>
+                {/* Topo: cliente + status */}
+                <div style={{ display:"flex",justifyContent:"space-between",gap:"10px",alignItems:"flex-start" }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:"14px",fontWeight:700,color:"var(--text-primary)" }}>{item.customer?.name ?? "—"}</div>
+                    {item.description && <div style={{ fontSize:"12px",color:"var(--text-secondary)",marginTop:"2px",lineHeight:1.4 }}>{item.description}</div>}
+                  </div>
+                  <span style={{ flexShrink:0,fontSize:"11px",fontWeight:700,color:sc.c,background:sc.bg,padding:"3px 10px",borderRadius:"20px",whiteSpace:"nowrap" }}>{sc.label}</span>
+                </div>
+
+                {/* Vencimento + valor */}
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:"10px" }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:"9.5px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:700,marginBottom:"3px" }}>Vencimento</div>
+                    <div style={{ display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap" }}>
+                      <span style={{ fontSize:"13px",fontWeight:600,color:dias>0?"var(--danger)":"var(--text-secondary)" }}>{formatDate(item.due_date)}</span>
+                      {dias>0 && <span style={{ fontSize:"10px",fontWeight:800,color:"var(--danger)",background:"var(--danger-soft)",padding:"1px 8px",borderRadius:"10px" }}>{dias}d em atraso</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right",flexShrink:0 }}>
+                    <div style={{ fontSize:"9.5px",color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.5px",fontWeight:700,marginBottom:"3px" }}>Valor</div>
+                    <div style={{ fontSize:"18px",fontWeight:800,color:"var(--text-primary)",letterSpacing:"-0.4px" }}>{R(item.amount)}</div>
+                  </div>
+                </div>
+
+                {/* Chips: categoria + parcela */}
+                {(item.category?.name || item.installment) && (
+                  <div style={{ display:"flex",gap:"6px",flexWrap:"wrap" }}>
+                    {item.category?.name && <span style={{ fontSize:"11px",background:"var(--bg-tertiary)",color:"var(--text-secondary)",padding:"3px 9px",borderRadius:"6px",border:"1px solid var(--border)" }}>{item.category.name}</span>}
+                    {item.installment && <span style={{ fontSize:"11px",background:"var(--bg-tertiary)",color:"var(--text-muted)",padding:"3px 9px",borderRadius:"6px",border:"1px solid var(--border)" }}>Parcela {item.installment}</span>}
+                  </div>
+                )}
+
+                {/* Ações (touch targets ≥40px) */}
+                <div style={{ display:"flex",gap:"7px",alignItems:"center" }}>
+                  {item.status!=="recebido" ? (
+                    <button onClick={()=>handleReceive(item)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",height:"40px",borderRadius:"8px",border:"none",background:"var(--success)",fontSize:"12.5px",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>
+                      <Check size={14}/> Marcar como recebido
+                    </button>
+                  ) : (
+                    <div style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"6px",height:"40px",borderRadius:"8px",background:"var(--success-soft)",fontSize:"12.5px",color:"var(--success)",fontWeight:700 }}>
+                      <Check size={14}/> Recebido
+                    </div>
+                  )}
+                  <button title="Editar" onClick={()=>openEdit(item)} style={{ width:"40px",height:"40px",flexShrink:0,borderRadius:"8px",border:"1px solid var(--border)",background:"var(--bg-tertiary)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"var(--text-secondary)" }}>
+                    <Edit2 size={15}/>
+                  </button>
+                  <button title="Excluir" onClick={()=>handleDelete(item)} style={{ width:"40px",height:"40px",flexShrink:0,borderRadius:"8px",border:"1px solid var(--border)",background:"var(--bg-tertiary)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"var(--danger)" }}>
+                    <Trash2 size={15}/>
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
       <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",overflow:"hidden" }}>
         <table style={{ width:"100%",borderCollapse:"collapse" }}>
           <thead>
@@ -278,6 +348,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
           </tbody>
         </table>
       </div>
+      )}
     </div>
   )
 }

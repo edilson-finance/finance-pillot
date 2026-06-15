@@ -138,20 +138,22 @@ export default function DashboardPage() {
     <div style={{ padding:"22px", maxWidth:"1600px" }}>
 
       {/* Status bar */}
-      <div style={{ background:"linear-gradient(135deg,rgba(245,158,11,0.08),rgba(244,63,94,0.06))", border:"1px solid rgba(245,158,11,0.25)", borderRadius:"var(--radius)", padding:"11px 18px", display:"flex", alignItems:"center", gap:"14px", marginBottom:"18px" }}>
+      <div className="dash-status" style={{ background:"linear-gradient(135deg,rgba(245,158,11,0.08),rgba(244,63,94,0.06))", border:"1px solid rgba(245,158,11,0.25)", borderRadius:"var(--radius)", padding:"11px 18px", display:"flex", alignItems:"center", gap:"14px", marginBottom:"18px", flexWrap:"wrap" }}>
         <div style={{ display:"flex",alignItems:"center",gap:"6px",padding:"3px 10px",background:"var(--warning-soft)",border:"1px solid var(--warning)",borderRadius:"20px",fontSize:"11px",fontWeight:700,color:"var(--warning)",flexShrink:0 }}>
           <span style={{ width:"6px",height:"6px",background:"var(--warning)",borderRadius:"50%",display:"inline-block" }}/>
           Atenção — {healthScore}/10
         </div>
-        <span style={{ fontSize:"12px",color:"var(--text-secondary)",flex:1 }}>
+        <span style={{ fontSize:"12px",color:"var(--text-secondary)",flex:"1 1 220px",minWidth:0 }}>
           Inadimplência em {kpis.inadimplencia}%{topClient ? `, concentração de receita (${topClient.nome} = ${topClient.percent.toFixed(0)}%)` : ""} e atenção ao caixa projetado.
         </span>
-        <Link href="/diagnostic" style={{ fontSize:"12px",color:"var(--warning)",textDecoration:"none",fontWeight:600,flexShrink:0 }}>Ver diagnóstico →</Link>
-        <div style={{ fontSize:"11px",color:"var(--text-muted)",borderLeft:"1px solid var(--border)",paddingLeft:"14px",flexShrink:0 }}>{range.label}</div>
+        <div className="dash-status-actions" style={{ display:"flex",alignItems:"center",gap:"14px",flexShrink:0,marginLeft:"auto" }}>
+          <Link href="/diagnostic" style={{ fontSize:"12px",color:"var(--warning)",textDecoration:"none",fontWeight:600,whiteSpace:"nowrap" }}>Ver diagnóstico →</Link>
+          <span style={{ fontSize:"11px",color:"var(--text-muted)",borderLeft:"1px solid var(--border)",paddingLeft:"14px",whiteSpace:"nowrap" }}>{range.label}</span>
+        </div>
       </div>
 
       {/* KPI Row 1 */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"12px" }}>
+      <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"12px" }}>
         <KpiCard label="Saldo Atual"          value={R(kpis.saldoAtual)}     sub="Todas as contas"                color="var(--accent)"  href="/cashflow" />
         <KpiCard label="Faturamento"          value={R(kpis.faturamento)}    sub={`+${kpis.faturamentoVar}% vs anterior`} trend="up" color="var(--success)" href="/bi" />
         <KpiCard label="Lucro Líquido"        value={R(kpis.lucroLiquido)}   sub={`Margem ${kpis.lucroMargin}%`} trend="down" color="var(--warning)" href="/dre" />
@@ -159,7 +161,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Row 2 */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"18px" }}>
+      <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"18px" }}>
         <KpiCard label="A Receber"     value={R(kpis.aReceber)}     sub={`${R(kpis.aReceberVencido)} em atraso`} trend="down" color="var(--warning)" href="/receivables" />
         <KpiCard label="A Pagar"       value={R(kpis.aPagar)}       sub={`${R(kpis.aPagarVencido)} vencido`}    trend="down" color="var(--danger)"  href="/payables" />
         <KpiCard label="Inadimplência" value={`${kpis.inadimplencia}%`} sub="Limite saudável: 5%"               trend="down" color="var(--danger)"  href="/delinquent" />
@@ -365,7 +367,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI extras */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px" }}>
+      <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px" }}>
         <KpiCard label="Capital de Giro"     value={R(kpis.capitalGiro)}    sub="Disponível"         color="var(--accent)" />
         <KpiCard label="Saldo Projetado 30d" value={R(kpis.saldoProjetado)} sub="+9,7% vs atual"     trend="up" color="var(--success)" href="/cashflow" />
         <KpiCard label="Ticket Médio"        value={R(kpis.ticketMedio)}    sub="Por lançamento" />
