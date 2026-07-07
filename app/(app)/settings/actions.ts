@@ -48,6 +48,7 @@ export interface CompanyInput {
   endereco?: string | null
   cidade?: string | null
   estado?: string | null
+  partner_receivers_enabled?: boolean
 }
 
 const TEXT_FIELDS: (keyof CompanyInput)[] = [
@@ -81,6 +82,9 @@ export async function updateCompany(input: CompanyInput): Promise<Result> {
       const v = input[f]
       patch[f] = typeof v === "string" ? v.trim() || null : v
     }
+  }
+  if (input.partner_receivers_enabled !== undefined) {
+    patch.partner_receivers_enabled = !!input.partner_receivers_enabled
   }
 
   if (Object.keys(patch).length === 0) return { ok: true }

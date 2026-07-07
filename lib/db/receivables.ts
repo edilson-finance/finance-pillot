@@ -6,20 +6,23 @@ export type Receivable = {
   due_date: string
   installment: string | null
   amount: number
+  interest: number
   status: "a_receber" | "em_atraso" | "recebido"
   received_at: string | null
   customer_id: string | null
   category_id: string | null
   account_id: string | null
+  partner_id: string | null
   customer: { name: string } | null
   category: { name: string } | null
+  partner: { name: string } | null
 }
 
 async function query() {
   const supabase = await createClient()
   return supabase
     .from("receivables")
-    .select("*, customer:customers(name), category:categories(name)")
+    .select("*, customer:customers(name), category:categories(name), partner:partners(name)")
     .order("due_date")
 }
 

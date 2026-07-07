@@ -8,7 +8,7 @@ import type { Receivable } from "@/lib/db/receivables"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useMobileNav } from "@/lib/mobile-nav"
 import { createReceivable, updateReceivable, deleteReceivable, markReceived } from "./actions"
-import { FormReceita, type Options } from "../transactions/transactions-client"
+import { FormReceita, InfoTip, type Options } from "../transactions/transactions-client"
 
 const R = formatCurrency
 
@@ -25,7 +25,7 @@ const stCfg: Record<string, { label: string; c: string; bg: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children: string }) {
+function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
@@ -49,7 +49,7 @@ function effReceivableStatus(due_date: string, status: string): "a_receber" | "e
   return isReceivableOverdue(due_date, status) ? "em_atraso" : "a_receber"
 }
 
-export default function ReceivablesClient({ receivables, customers, categories, accounts, costCenters, suppliers, products }: {
+export default function ReceivablesClient({ receivables, customers, categories, accounts, costCenters, suppliers, products, partners, partnerReceiversEnabled }: {
   receivables: Receivable[]
   customers: Opt[]
   categories: Cat[]
@@ -57,6 +57,8 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   costCenters: Opt[]
   suppliers: Opt[]
   products: Prod[]
+  partners: Opt[]
+  partnerReceiversEnabled: boolean
 }) {
   const router = useRouter()
   // Mobile: lista vira cards (ver bloco isMobile abaixo) em vez da tabela cortada.
@@ -70,7 +72,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const o: Options = { categories, accounts, costCenters, customers, suppliers, products }
+  const o: Options = { categories, accounts, costCenters, customers, suppliers, products, partners, partnerReceiversEnabled }
 
   const filtered = receivables
     .filter(r => {
@@ -205,6 +207,14 @@ export default function ReceivablesClient({ receivables, customers, categories, 
                 <option value="recebido">Recebido</option>
               </select>
             </div>
+            {partnerReceiversEnabled && (
+              <div><Label>Recebedor (parceiro)<InfoTip text="Dono do valor desta cobrança. Com um parceiro selecionado, o valor bruto é repasse a ele — não conta como receita da empresa; só os juros contam." /></Label>
+                <select name="partner_id" defaultValue={editing?.partner_id ?? ""} style={inp}>
+                  <option value="">A própria empresa</option>
+                  {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>
@@ -243,6 +253,11 @@ export default function ReceivablesClient({ receivables, customers, categories, 
                   <div style={{ minWidth:0 }}>
                     <div style={{ fontSize:"14px",fontWeight:700,color:"var(--text-primary)" }}>{item.customer?.name ?? "—"}</div>
                     {item.description && <div style={{ fontSize:"12px",color:"var(--text-secondary)",marginTop:"2px",lineHeight:1.4 }}>{item.description}</div>}
+                    {item.partner?.name && (
+                      <span style={{ display:"inline-block",marginTop:"5px",fontSize:"10.5px",fontWeight:700,color:"var(--purple)",background:"var(--purple-soft)",padding:"2px 8px",borderRadius:"10px" }}>
+                        Recebedor: {item.partner.name}
+                      </span>
+                    )}
                   </div>
                   <span style={{ flexShrink:0,fontSize:"11px",fontWeight:700,color:sc.c,background:sc.bg,padding:"3px 10px",borderRadius:"20px",whiteSpace:"nowrap" }}>{sc.label}</span>
                 </div>
@@ -312,7 +327,12 @@ export default function ReceivablesClient({ receivables, customers, categories, 
                 <tr key={item.id} style={{ borderBottom:i<filtered.length-1?"1px solid var(--border)":"none" }}
                   onMouseEnter={e=>(e.currentTarget.style.background="var(--bg-tertiary)")}
                   onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
-                  <td style={{ padding:"11px 14px",fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{item.customer?.name ?? "—"}</td>
+                  <td style={{ padding:"11px 14px" }}>
+                    <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{item.customer?.name ?? "—"}</div>
+                    {item.partner?.name && (
+                      <div style={{ fontSize:"10px",fontWeight:700,color:"var(--purple)",marginTop:"2px" }}>Recebedor: {item.partner.name}</div>
+                    )}
+                  </td>
                   <td style={{ padding:"11px 14px",fontSize:"12px",color:"var(--text-secondary)",maxWidth:"160px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{item.description ?? "—"}</td>
                   <td style={{ padding:"11px 14px" }}>
                     {item.category?.name

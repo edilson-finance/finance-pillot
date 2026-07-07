@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useTransition } from "react"
-import { Building2, Bell, Link2, Shield, Upload, Layers, Check, X } from "lucide-react"
+import { Building2, Bell, Link2, Shield, Upload, Layers, Check, X, SlidersHorizontal } from "lucide-react"
 import { useCompany, COMPANY_PROFILES, normalizeCompanyType } from "@/lib/company-context"
 import type { CompanySettings } from "@/lib/db/company"
 import { updateCompany, uploadCompanyLogo, removeCompanyLogo } from "./actions"
@@ -12,6 +12,7 @@ const settingsTabs = [
   { label: "Notificações", icon: Bell },
   { label: "Integrações", icon: Link2 },
   { label: "Segurança", icon: Shield },
+  { label: "Funções", icon: SlidersHorizontal },
 ]
 
 const inp: React.CSSProperties = {
@@ -52,6 +53,47 @@ function Toggle({ label, hint, defaultChecked }: { label: string; hint?: string;
       }}>
         <span style={{ position: "absolute", top: "3px", left: on ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
       </button>
+    </div>
+  )
+}
+
+/* Toggle persistido: grava na empresa via updateCompany, com rollback em erro. */
+function FeatureToggle({ label, hint, initial, onSave }: {
+  label: string; hint?: string; initial: boolean
+  onSave: (v: boolean) => Promise<{ ok: boolean; error?: string }>
+}) {
+  const [on, setOn] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [ok, setOk] = useState(false)
+  async function flip() {
+    if (busy) return
+    const next = !on
+    setOn(next); setBusy(true); setErr(null); setOk(false)
+    const res = await onSave(next)
+    setBusy(false)
+    if (!res.ok) { setOn(!next); setErr(res.error ?? "Falha ao salvar.") }
+    else { setOk(true); setTimeout(() => setOk(false), 2000) }
+  }
+  return (
+    <div style={{ padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600, display: "flex", alignItems: "center", gap: "7px" }}>
+            {label}
+            {ok && <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--success)", background: "var(--success-soft)", padding: "1px 7px", borderRadius: "10px" }}>Salvo</span>}
+          </div>
+          {hint && <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", lineHeight: 1.55 }}>{hint}</div>}
+        </div>
+        <button onClick={flip} disabled={busy} style={{
+          width: "40px", height: "22px", borderRadius: "11px", border: "none",
+          background: on ? "var(--accent)" : "var(--border)", cursor: busy ? "wait" : "pointer",
+          position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: busy ? 0.6 : 1,
+        }}>
+          <span style={{ position: "absolute", top: "3px", left: on ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+        </button>
+      </div>
+      {err && <div style={{ fontSize: "11px", color: "var(--danger)", marginTop: "6px" }}>{err}</div>}
     </div>
   )
 }
@@ -449,6 +491,24 @@ export default function SettingsClient({ company }: { company: CompanySettings |
                   </div>
                 ))}
               </div>
+            </>
+          )}
+
+          {/* ── FUNÇÕES ── */}
+          {tab === 5 && (
+            <>
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>Funções do sistema</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Ligue ou desligue funções opcionais. Desligadas, elas somem das telas — nenhum dado é apagado.
+                </div>
+              </div>
+              <FeatureToggle
+                label="Recebedor parceiro (repasse)"
+                hint="Permite indicar numa cobrança um recebedor que não é a empresa (ex.: dono do lote). O valor bruto vira repasse ao parceiro — não conta como receita da empresa; só os juros contam. Habilita o cadastro de Recebedores e o relatório Recebimento Parceiro."
+                initial={company?.partner_receivers_enabled ?? false}
+                onSave={(v) => updateCompany({ partner_receivers_enabled: v })}
+              />
             </>
           )}
         </div>

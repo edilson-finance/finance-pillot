@@ -19,10 +19,11 @@ export interface CompanySettings {
   endereco: string | null
   cidade: string | null
   estado: string | null
+  partner_receivers_enabled: boolean
 }
 
 const COLS =
-  "id, name, type, logo_url, razao_social, cnpj, inscricao_estadual, segmento, regime_tributario, regime_financeiro, telefone, whatsapp, email, site, cep, endereco, cidade, estado"
+  "id, name, type, logo_url, razao_social, cnpj, inscricao_estadual, segmento, regime_tributario, regime_financeiro, telefone, whatsapp, email, site, cep, endereco, cidade, estado, partner_receivers_enabled"
 
 /** Carrega o cadastro da empresa do usuário logado (RLS escopa por company_id). */
 export async function getCompanySettings(): Promise<CompanySettings | null> {

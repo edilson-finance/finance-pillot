@@ -126,6 +126,13 @@ export async function createReceita(fd: FormData): Promise<Result> {
 
   const status = (str(fd, "status") || "a_receber") as
     "a_receber" | "recebido" | "recebido_parcial"
+
+  // Juros/Multa: aceito em R$ (padrão) ou em % do Valor Total (interest_mode="percent").
+  const interestInput = num(fd, "interest")
+  const interest = str(fd, "interest_mode") === "percent"
+    ? round2(amount * Math.max(0, interestInput) / 100)
+    : Math.max(0, interestInput)
+
   const parcelado = bool(fd, "parcelado")
   const recorrente = bool(fd, "recorrente")
   const nParc = parcelado ? Math.max(2, Math.min(120, Number(str(fd, "installments_count") || "2"))) : 1
@@ -141,12 +148,13 @@ export async function createReceita(fd: FormData): Promise<Result> {
     document_number: nstr(fd, "document_number"),
     payment_method: nstr(fd, "payment_method"),
     discount: num(fd, "discount"),
-    interest: num(fd, "interest"),
+    interest,
     notes: nstr(fd, "notes"),
     contact: nstr(fd, "contact"),
     email: nstr(fd, "email"),
     counterparty_doc: nstr(fd, "counterparty_doc"),
     payment_term_days: str(fd, "payment_term_days") ? Number(str(fd, "payment_term_days")) : null,
+    partner_id: nstr(fd, "partner_id"),
   }
 
   // monta o conjunto de receivables (parcelas, recorrência ou único)
@@ -177,14 +185,24 @@ export async function createReceita(fd: FormData): Promise<Result> {
     if (childIds.length) await supabase.from("receivables").update({ parent_id: parentId }).in("id", childIds)
   }
 
-  // baixa no caixa para os recebidos
+  // baixa no caixa para os recebidos.
+  // Com recebedor parceiro: o bruto entra marcado com partner_id (repasse — não é
+  // receita da empresa) e os juros entram como transação própria (receita).
   const txns = recs
     .filter((r) => r.status === "recebido")
-    .map((r) => ({
-      type: "entrada", date: r.due_date, amount: r.amount, description,
-      category_id: base.category_id, account_id: r.account_id, cost_center_id: base.cost_center_id,
-      customer_id, receivable_id: r.id, payment_method: base.payment_method, document_number: base.document_number,
-    }))
+    .flatMap((r) => {
+      const espelho = {
+        type: "entrada", date: r.due_date, amount: r.amount, description,
+        category_id: base.category_id, account_id: r.account_id, cost_center_id: base.cost_center_id,
+        customer_id, receivable_id: r.id, payment_method: base.payment_method, document_number: base.document_number,
+      }
+      if (!base.partner_id) return [espelho]
+      const out: any[] = [{ ...espelho, partner_id: base.partner_id }]
+      if (base.interest > 0) {
+        out.push({ ...espelho, amount: base.interest, description: `Juros — ${description}` })
+      }
+      return out
+    })
   if (txns.length) await supabase.from("transactions").insert(txns)
   if (recs.some((r) => r.status === "recebido")) {
     await supabase.from("receivables").update({ received_at: new Date().toISOString().slice(0, 10) })

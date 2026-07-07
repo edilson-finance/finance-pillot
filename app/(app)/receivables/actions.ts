@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 type Result = { error: string | null }
 
 function parsePayload(formData: FormData) {
-  return {
+  const payload: Record<string, unknown> = {
     customer_id: (String(formData.get("customer_id") ?? "").trim() || null),
     description: (String(formData.get("description") ?? "").trim() || null),
     category_id: (String(formData.get("category_id") ?? "").trim() || null),
@@ -15,6 +15,12 @@ function parsePayload(formData: FormData) {
     status: String(formData.get("status") ?? "a_receber"),
     account_id: (String(formData.get("account_id") ?? "").trim() || null),
   }
+  // partner_id só entra quando o campo veio no form (função ligada); assim,
+  // editar com a função desligada não apaga o parceiro já vinculado.
+  if (formData.has("partner_id")) {
+    payload.partner_id = (String(formData.get("partner_id") ?? "").trim() || null)
+  }
+  return payload
 }
 
 function revalidate() {

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Tag, Layers, Users, Truck, CreditCard, Package, ChevronRight } from "lucide-react"
+import { Tag, Layers, Users, Truck, CreditCard, Package, ChevronRight, Handshake } from "lucide-react"
 
 const registros = [
   { href:"/registers/categories",  label:"Categorias",           desc:"Plano de contas — grupos contábeis NBC TG / CFC", icon:Tag,        color:"var(--success)" },
@@ -12,7 +12,14 @@ const registros = [
   { href:"/registers/products",    label:"Produtos e Serviços",  desc:"Catálogo de itens para lançamentos rápidos",       icon:Package,    color:"var(--danger)" },
 ]
 
-export default function RegistersClient({ counts }: { counts: Record<string, number> }) {
+const partnersCard = {
+  href:"/registers/partners", label:"Recebedores (Parceiros)",
+  desc:"Terceiros que recebem o bruto das cobranças — juros ficam com a empresa",
+  icon:Handshake, color:"var(--purple)",
+}
+
+export default function RegistersClient({ counts, partnersEnabled }: { counts: Record<string, number>; partnersEnabled?: boolean }) {
+  const cards = partnersEnabled ? [...registros, partnersCard] : registros
   return (
     <div style={{ padding:"22px" }}>
       <div style={{ marginBottom:"24px" }}>
@@ -21,7 +28,7 @@ export default function RegistersClient({ counts }: { counts: Record<string, num
       </div>
 
       <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px" }}>
-        {registros.map(r=>{
+        {cards.map(r=>{
           const Icon = r.icon
           const count = counts[r.href] ?? 0
           return (

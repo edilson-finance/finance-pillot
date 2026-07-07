@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Upload, Plus, Trash2, X, Check as CheckIcon } from "lucide-react"
+import { ChevronLeft, Upload, Plus, Trash2, X, Check as CheckIcon, Info } from "lucide-react"
 import Link from "next/link"
 import { createReceita, createDespesa, createTransferencia } from "./actions"
 import type { RecentEntry } from "@/lib/db/lancamentos"
@@ -23,7 +23,7 @@ const inp: React.CSSProperties = {
 }
 const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }
 
-function Label({ children, req }: { children: string; req?: boolean }) {
+function Label({ children, req }: { children: React.ReactNode; req?: boolean }) {
   return (
     <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
       {children} {req && <span style={{ color: "var(--danger)" }}>*</span>}
@@ -37,8 +37,32 @@ function Section({ children }: { children: string }) {
     </div>
   )
 }
-function Field({ label, req, span, children }: { label: string; req?: boolean; span?: boolean; children: React.ReactNode }) {
+function Field({ label, req, span, children }: { label: React.ReactNode; req?: boolean; span?: boolean; children: React.ReactNode }) {
   return <div style={span ? { gridColumn: "1 / -1" } : undefined}><Label req={req}>{label}</Label>{children}</div>
+}
+
+/* Legenda de campo: ícone ⓘ com tooltip no hover (desktop) e no toque (mobile). */
+export function InfoTip({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span style={{ position: "relative", display: "inline-flex", verticalAlign: "middle", marginLeft: "5px" }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <button type="button" aria-label="O que é este campo?"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShow(s => !s) }}
+        style={{ border: "none", background: "none", padding: 0, cursor: "help", color: "var(--text-muted)", display: "inline-flex", alignItems: "center" }}>
+        <Info size={12} />
+      </button>
+      {show && (
+        <span style={{
+          position: "absolute", bottom: "calc(100% + 7px)", left: "-8px",
+          width: "min(240px, 72vw)", background: "var(--bg-elevated)", border: "1px solid var(--border-strong)",
+          borderRadius: "8px", padding: "9px 11px", fontSize: "11px", fontWeight: 400, lineHeight: 1.55,
+          color: "var(--text-secondary)", textTransform: "none", letterSpacing: "normal",
+          boxShadow: "var(--shadow-lg)", zIndex: 300, whiteSpace: "normal",
+        }}>{text}</span>
+      )}
+    </span>
+  )
 }
 
 // ── chips de forma de pagamento ──────────────────────────────────────────────
@@ -372,6 +396,57 @@ function Money({ name, color, required }: { name: string; color: string; require
   )
 }
 
+/* Juros/Multa em R$ OU em % do Valor Total. Envia `interest` + `interest_mode`;
+   no modo %, o servidor converte para R$ sobre o amount ao salvar. Só um input
+   `interest` fica montado por vez (trocar de modo zera o outro). */
+function InterestField({ color }: { color: string }) {
+  const [mode, setMode] = useState<"valor" | "percent">("valor")
+  const [pct, setPct] = useState("")
+  const modeBtn = (m: "valor" | "percent", l: string) => (
+    <button type="button" onClick={() => setMode(m)} style={{
+      padding: "0 13px", border: "none", cursor: "pointer", fontFamily: "inherit",
+      fontSize: "12px", fontWeight: mode === m ? 800 : 500,
+      background: mode === m ? color : "transparent",
+      color: mode === m ? "#fff" : "var(--text-secondary)",
+      transition: "background 0.15s",
+    }}>{l}</button>
+  )
+  return (
+    <div>
+      <input type="hidden" name="interest_mode" value={mode} />
+      <div style={{ display: "flex", gap: "8px", alignItems: "stretch" }}>
+        <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: "6px", overflow: "hidden", flexShrink: 0 }}>
+          {modeBtn("valor", "R$")}
+          {modeBtn("percent", "%")}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {mode === "valor" ? (
+            <Money name="interest" color={color} />
+          ) : (
+            <div style={{ position: "relative" }}>
+              <input name="interest" inputMode="decimal" value={pct} placeholder="0,00"
+                onChange={(e) => {
+                  // normaliza ponto→vírgula (teclado numérico mobile) e permite só uma vírgula
+                  let v = e.target.value.replace(/\./g, ",").replace(/[^\d,]/g, "")
+                  const i = v.indexOf(",")
+                  if (i !== -1) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/,/g, "")
+                  setPct(v.slice(0, 7))
+                }}
+                style={{ ...inp, paddingRight: "32px", color: pct ? "var(--text-primary)" : "var(--text-muted)" }} />
+              <span style={{ position: "absolute", right: "11px", top: "9px", fontSize: "13px", fontWeight: 600, color: pct ? color : "var(--text-muted)", pointerEvents: "none" }}>%</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {mode === "percent" && (
+        <div style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "5px", lineHeight: 1.5 }}>
+          Percentual sobre o Valor Total — o valor em R$ é calculado automaticamente ao salvar.
+        </div>
+      )}
+    </div>
+  )
+}
+
 // modal de sucesso
 function SuccessModal({ open, title, subtitle, color, onNew, onClose }: {
   open: boolean; title: string; subtitle: string; color: string; onNew: () => void; onClose: () => void
@@ -575,6 +650,29 @@ export function FormReceita({ o, onSaved, onNew, onCancel }: { o: Options; onSav
         <Field label="Prazo de Pagamento (dias)"><input name="payment_term_days" type="number" min="0" placeholder="30" style={inp} /></Field>
       </div>
 
+      {o.partnerReceiversEnabled && (
+        <>
+          <Section>Recebedor do Valor (parceiro)</Section>
+          <div style={{ background: "var(--purple-soft)", border: "1px solid rgba(139,92,246,0.25)", borderRadius: "10px", padding: "16px", marginBottom: "4px" }}>
+            <div style={grid2}>
+              <Field label={<>Quem recebe o valor bruto<InfoTip text="Dono do valor desta cobrança. Escolhendo um parceiro (ex.: dono do lote), o valor bruto recebido é repasse a ele — não conta como receita nem faturamento da empresa. Deixe 'A própria empresa' para uma receita normal." /></>}>
+                <select name="partner_id" style={inp}>
+                  <option value="">A própria empresa (padrão)</option>
+                  {(o.partners ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
+              <Field label={<>Juros / Multa (fica com a empresa)<InfoTip text="Juros e multa cobrados do cliente nesta parcela. Essa parte é receita da empresa e NÃO entra no repasse ao parceiro. Informe em R$ ou em % — no modo %, o percentual é aplicado sobre o Valor Total e convertido em R$ ao salvar." /></>}><InterestField color={C} /></Field>
+            </div>
+            <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginTop: "14px", padding: "11px 13px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "8px" }}>
+              <Info size={14} style={{ color: "var(--purple)", flexShrink: 0, marginTop: "2px" }} />
+              <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: 1.65 }}>
+                Com um parceiro selecionado, o <strong>valor bruto</strong> é repasse ao recebedor e não conta como receita da empresa — somente os <strong>juros/multa</strong> contam. O repasse aparece no relatório <strong>Recebimento Parceiro</strong>.
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
       <Section>Produto / Serviço</Section>
       <Check checked={detail} onChange={setDetail} label="Detalhar produto ou serviço vendido" />
       {detail && <ItemsEditor items={items} setItems={setItems} products={o.products} />}
@@ -748,6 +846,8 @@ function FormTransferencia({ o, onSaved, onNew }: { o: Options; onSaved: () => v
 // ── tipos das opções ─────────────────────────────────────────────────────────
 export type Options = {
   categories: Cat[]; accounts: Acc[]; costCenters: Opt[]; customers: Opt[]; suppliers: Opt[]; products: Prod[]
+  /* Recebedor parceiro (repasse) — presentes só quando a função está ligada em Configurações */
+  partners?: Opt[]; partnerReceiversEnabled?: boolean
 }
 
 const PRACTICES: Record<string, string[]> = {
@@ -775,11 +875,11 @@ const STATUS_LABEL: Record<string, { l: string; c: string }> = {
   em_atraso: { l: "Em atraso", c: "var(--danger)" },
 }
 
-export default function TransactionsClient({ categories, accounts, costCenters, customers, suppliers, products, recent }: Options & { recent: RecentEntry[] }) {
+export default function TransactionsClient({ categories, accounts, costCenters, customers, suppliers, products, partners, partnerReceiversEnabled, recent }: Options & { recent: RecentEntry[] }) {
   const router = useRouter()
   const [tab, setTab] = useState<"receita" | "despesa" | "transferencia">("receita")
   const [formKey, setFormKey] = useState(0)
-  const o: Options = { categories, accounts, costCenters, customers, suppliers, products }
+  const o: Options = { categories, accounts, costCenters, customers, suppliers, products, partners, partnerReceiversEnabled }
   const onSaved = () => router.refresh()
   const onNew = () => setFormKey((k) => k + 1)
 
