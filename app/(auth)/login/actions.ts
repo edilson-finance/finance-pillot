@@ -9,6 +9,13 @@ export async function login(formData: FormData) {
     password: String(formData.get("password")),
   })
   if (error) return { error: error.message }
+  // Open redirect guard: `startsWith("/")` sozinho deixa passar URLs
+  // protocolo-relativas (`//evil.com`) e a variante `/\evil.com`, que o browser
+  // resolve como origem externa. Exige caminho interno de verdade.
   const next = String(formData.get("next") ?? "").trim()
-  redirect(next && next.startsWith("/") ? next : "/dashboard")
+  const safeNext =
+    next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+      ? next
+      : "/dashboard"
+  redirect(safeNext)
 }
