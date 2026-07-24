@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
 const CFO_AI_SYSTEM_PROMPT = `
 Você é o CFO AI, um Diretor Financeiro Estratégico virtual de nível mundial dentro de um sistema de gestão financeira empresarial.
@@ -181,6 +182,28 @@ async function askGemini(question: string, context: CfoContext) {
 }
 
 export async function POST(req: NextRequest) {
+  // Autenticação + gating de módulo. O proxy.ts NÃO protege /api/* (o gating usa
+  // path.split("/")[1] = "api", fora de MODULE_KEYS), então sem esta checagem
+  // qualquer requisição — inclusive não autenticada — dispararia o Gemini (custo).
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  }
+  // CFO AI é o módulo "diagnostic"; admins/super_admins têm todos os módulos.
+  const { data: profile } = await supabase
+    .from("profiles").select("role").eq("id", user.id).maybeSingle()
+  const role = profile?.role
+  if (role !== "admin" && role !== "super_admin") {
+    const { data: perm } = await supabase
+      .from("member_permissions")
+      .select("module").eq("user_id", user.id).eq("module", "diagnostic").eq("allowed", true)
+      .maybeSingle()
+    if (!perm) {
+      return NextResponse.json({ error: "Sem acesso ao módulo CFO AI" }, { status: 403 })
+    }
+  }
+
   const body: unknown = await req.json().catch(() => ({}))
   const requestBody = isRecord(body) ? body : {}
   const question = String(requestBody.question ?? "")
