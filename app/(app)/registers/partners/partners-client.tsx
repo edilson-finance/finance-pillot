@@ -74,7 +74,7 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Recebedor" : "Novo Recebedor"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>

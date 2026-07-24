@@ -110,15 +110,15 @@ export default function MetasPage() {
             </div>
           </div>
         </div>
-        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--accent)28", borderRadius: "var(--radius)" }}>
+        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--accent-border)", borderRadius: "var(--radius)" }}>
           <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Em andamento</div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--accent)" }}>{emAndamento}</div>
         </div>
-        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--danger)28", borderRadius: "var(--radius)" }}>
+        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--danger-border)", borderRadius: "var(--radius)" }}>
           <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Em risco</div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--danger)" }}>{emRisco}</div>
         </div>
-        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--success)28", borderRadius: "var(--radius)" }}>
+        <div style={{ padding: "16px", background: "var(--bg-secondary)", border: "1px solid var(--success-border)", borderRadius: "var(--radius)" }}>
           <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Críticas em risco</div>
           <div style={{ fontSize: "28px", fontWeight: 800, color: "var(--danger)" }}>
             {metas.filter(m => m.status === "em_risco" && m.prioridade === "critica").length}

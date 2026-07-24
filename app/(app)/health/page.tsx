@@ -96,7 +96,7 @@ export default function HealthPage() {
       </div>
 
       {/* Meta source banner */}
-      <div style={{ display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",background:useMarket?"var(--accent-soft)":"var(--purple-soft)",border:`1px solid ${useMarket?"var(--accent)40":"var(--purple)40"}`,borderRadius:"var(--radius)",marginBottom:"16px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:"10px",padding:"10px 14px",background:useMarket?"var(--accent-soft)":"var(--purple-soft)",border:`1px solid ${useMarket?"var(--accent-border)":"var(--purple-border)"}`,borderRadius:"var(--radius)",marginBottom:"16px" }}>
         <Info size={13} style={{ color:useMarket?"var(--accent)":"var(--purple)",flexShrink:0 }}/>
         <span style={{ fontSize:"12px",color:useMarket?"var(--accent)":"var(--purple)" }}>
           {useMarket ? "Usando benchmarks padrão de mercado (Construção Civil / PMEs Brasil). Clique em 'Editar metas' para personalizar." : "Usando metas personalizadas. Clique em 'Padrão de mercado' para restaurar."}

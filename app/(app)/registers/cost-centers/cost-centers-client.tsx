@@ -100,7 +100,7 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Centro de Custo" : "Novo Centro de Custo"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
@@ -129,7 +129,7 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
           <div key={c.id} style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"16px 18px",display:"grid",gridTemplateColumns:"1fr 140px 140px 200px 90px 80px",gap:"16px",alignItems:"center" }}>
             <div>
               <div style={{ display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px" }}>
-                {c.code && <span style={{ fontSize:"10px",fontWeight:700,color:"var(--accent)",background:"var(--accent)20",padding:"2px 7px",borderRadius:"20px" }}>{c.code}</span>}
+                {c.code && <span style={{ fontSize:"10px",fontWeight:700,color:"var(--accent)",background:"var(--accent-soft)",padding:"2px 7px",borderRadius:"20px" }}>{c.code}</span>}
                 <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{c.name}</span>
               </div>
               <div style={{ fontSize:"11px",color:"var(--text-muted)" }}>—</div>
