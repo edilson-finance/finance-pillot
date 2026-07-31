@@ -37,8 +37,8 @@ const sections: Section[] = [
   {
     label: "Operação",
     items: [
-      { href: "/payables",      label: "Contas a Pagar",   icon: CreditCard, badge: "3" },
-      { href: "/receivables",   label: "Contas a Receber", icon: Wallet,     badge: "5" },
+      { href: "/payables",      label: "Contas a Pagar",   icon: CreditCard },
+      { href: "/receivables",   label: "Contas a Receber", icon: Wallet },
       { href: "/transactions",  label: "Lançamentos",      icon: TrendingUp },
       { href: "/reconciliation",label: "Conciliação",      icon: RefreshCw },
     ],
@@ -56,8 +56,8 @@ const sections: Section[] = [
     items: [
       { href: "/health",        label: "Saúde Financeira", icon: Activity },
       { href: "/diagnostic",    label: "CFO AI",           icon: BrainCircuit },
-      { href: "/delinquent",    label: "Inadimplentes",    icon: AlertTriangle, badge: "5" },
-      { href: "/alerts",        label: "Alertas",          icon: Bell, badge: "4" },
+      { href: "/delinquent",    label: "Inadimplentes",    icon: AlertTriangle },
+      { href: "/alerts",        label: "Alertas",          icon: Bell },
     ],
   },
   {
