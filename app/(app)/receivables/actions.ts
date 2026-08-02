@@ -59,11 +59,52 @@ export async function deleteReceivable(id: string): Promise<Result> {
 export async function markReceived(id: string): Promise<Result> {
   const supabase = await createClient()
   const today = new Date().toISOString().slice(0, 10)
-  const { error } = await supabase
+
+  // Carrega o título para gerar o espelho no caixa (transactions) — antes esta
+  // action só trocava o status, então "marcar como recebido" na lista NÃO movia o
+  // caixa, ao contrário de lançar já como recebido no formulário. Isso deixava o
+  // fluxo de caixa/saldo divergente conforme por onde o usuário baixava.
+  const { data: rec, error: loadErr } = await supabase
     .from("receivables")
-    .update({ status: "recebido", received_at: today })
+    .select("id, status, amount, description, category_id, account_id, cost_center_id, customer_id, payment_method, document_number, partner_id, interest, due_date")
     .eq("id", id)
+    .maybeSingle()
+  if (loadErr) return { error: loadErr.message }
+  if (!rec) return { error: "Título não encontrado." }
+
+  // Idempotência: já recebido → nada a fazer.
+  if (rec.status === "recebido") { revalidate(); return { error: null } }
+
+  // Só gera o movimento se ainda não há transação para este título (evita duplicar
+  // quando o título já nasceu recebido, ou em clique duplo).
+  const { data: existing } = await supabase
+    .from("transactions").select("id").eq("receivable_id", id).limit(1)
+  if (!existing || existing.length === 0) {
+    const espelho: Record<string, unknown> = {
+      type: "entrada", date: rec.due_date ?? today, amount: rec.amount, description: rec.description,
+      category_id: rec.category_id, account_id: rec.account_id, cost_center_id: rec.cost_center_id,
+      customer_id: rec.customer_id, receivable_id: rec.id,
+      payment_method: rec.payment_method, document_number: rec.document_number,
+    }
+    // Recebedor parceiro (igual ao createReceita): o bruto entra como repasse
+    // (partner_id) e os juros, quando houver, como receita própria (sem partner_id).
+    const txns: Record<string, unknown>[] = []
+    if (rec.partner_id) {
+      txns.push({ ...espelho, partner_id: rec.partner_id })
+      if (Number(rec.interest ?? 0) > 0) {
+        txns.push({ ...espelho, amount: rec.interest, description: `Juros — ${rec.description ?? ""}` })
+      }
+    } else {
+      txns.push(espelho)
+    }
+    const { error: txErr } = await supabase.from("transactions").insert(txns)
+    if (txErr) return { error: txErr.message }
+  }
+
+  const { error } = await supabase
+    .from("receivables").update({ status: "recebido", received_at: today }).eq("id", id)
   if (error) return { error: error.message }
+  revalidatePath("/transactions")
   revalidate()
   return { error: null }
 }
