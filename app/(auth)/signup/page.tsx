@@ -28,7 +28,7 @@ export default function SignupPage() {
 
   return (
     <div style={{
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: "var(--bg-primary)",
       display: "flex",
       alignItems: "center",

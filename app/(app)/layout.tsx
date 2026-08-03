@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <CompanyProvider initialType={company?.type} initialLogoUrl={company?.logo_url} initialName={company?.name}>
     <DateRangeProvider>
     <MobileNavProvider>
-      <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg-primary)" }}>
+      <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "var(--bg-primary)" }}>
         <Sidebar />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
           <Topbar />

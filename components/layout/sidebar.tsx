@@ -209,7 +209,7 @@ export function Sidebar() {
         background: "var(--bg-secondary)",
         borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
-        height: "100vh",
+        height: "100dvh",
         position: "fixed", top: 0, left: 0,
         zIndex: 300,
         transform: open ? "translateX(0)" : "translateX(-100%)",
@@ -221,7 +221,7 @@ export function Sidebar() {
         background: "var(--bg-secondary)",
         borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
-        height: "100vh",
+        height: "100dvh",
         position: "sticky", top: 0,
         flexShrink: 0,
       }

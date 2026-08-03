@@ -45,7 +45,7 @@ export default async function AcceptInvitePage({
 
 function Message({ title, body }: { title: string; body: string }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "var(--bg-primary)" }}>
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "var(--bg-primary)" }}>
       <div style={{ maxWidth: "420px", textAlign: "center", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "14px", padding: "32px" }}>
         <h1 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "8px" }}>{title}</h1>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>{body}</p>
