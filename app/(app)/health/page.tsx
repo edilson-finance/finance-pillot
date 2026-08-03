@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { useKpis, useHealthDimensions } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { useDateRange } from "@/lib/date-context"
 import { Edit2, Check, X, RotateCcw, Info } from "lucide-react"
 
@@ -48,13 +49,15 @@ function ScoreCircle({ score, config }: { score: number; config: any }) {
 
 export default function HealthPage() {
   const { range } = useDateRange()
-  const { kpis } = useKpis(range)
+  const { kpis, loading } = useKpis(range)
   const { dims: healthDimensions } = useHealthDimensions()
   const [editMode, setEditMode] = useState(false)
   const [metas, setMetas] = useState<Record<string,{bom:number;atencao:number;risco:number}>>(() =>
     Object.fromEntries(Object.entries(MARKET_DEFAULTS).map(([k,v])=>[k,{bom:v.bom,atencao:v.atencao,risco:v.risco}]))
   )
   const [useMarket, setUseMarket] = useState(true)
+
+  if (loading) return <ScreenLoader />
 
   function resetToMarket() {
     setMetas(Object.fromEntries(Object.entries(MARKET_DEFAULTS).map(([k,v])=>[k,{bom:v.bom,atencao:v.atencao,risco:v.risco}])))
@@ -111,7 +114,7 @@ export default function HealthPage() {
             Empresa em estado de <span style={{ color:scoreConf.color }}>{scoreConf.label}</span>
           </div>
           <p style={{ fontSize:"12.5px",color:"var(--text-secondary)",lineHeight:1.65 }}>
-            Com base nos dados de {range.label}, foram avaliadas 10 dimensões financeiras. Os pontos críticos são inadimplência ({kpis.inadimplencia}%) e concentração de receita (top 3 clientes = 93%). O caixa está saudável, mas o lucro líquido ({kpis.lucroMargin}%) está abaixo da meta de 10%.
+            Com base nos dados de {range.label}, foram avaliadas 10 dimensões financeiras. A inadimplência está em {kpis.inadimplencia}% e a margem líquida em {kpis.lucroMargin}% (meta: acima de 10%). Veja abaixo as dimensões que merecem mais atenção.
           </p>
         </div>
         <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px",minWidth:"180px" }}>

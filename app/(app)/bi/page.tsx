@@ -445,9 +445,18 @@ export default function BiPage() {
                 <span style={{ fontSize:"11px",fontWeight:700,color:"var(--text-primary)" }}>{c.percent.toFixed(1)}%</span>
               </div>
             ))}
-            <div style={{ marginTop:"8px", padding:"6px 8px", background:"var(--danger-soft)", borderRadius:"6px" }}>
-              <span style={{ fontSize:"10px", color:"var(--danger)", fontWeight:600 }}>Top 3 clientes = 93% — risco alto</span>
-            </div>
+            {(() => {
+              const top3 = topClients.slice(0, 3).reduce((s, c) => s + c.percent, 0)
+              if (top3 <= 0) return null
+              const alta = top3 > 60
+              return (
+                <div style={{ marginTop:"8px", padding:"6px 8px", background: alta ? "var(--danger-soft)" : "var(--bg-tertiary)", borderRadius:"6px" }}>
+                  <span style={{ fontSize:"10px", color: alta ? "var(--danger)" : "var(--text-secondary)", fontWeight:600 }}>
+                    Top 3 clientes = {top3.toFixed(0)}%{alta ? " — concentração alta" : ""}
+                  </span>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </>}

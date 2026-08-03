@@ -9,6 +9,7 @@ import Link from "next/link"
 import { useDateRange } from "@/lib/date-context"
 import { daysBetween } from "@/lib/date-utils"
 import { useKpis, useRevenueSeries, useTopClients, useTopExpenses, useHealthDimensions, useCashflow } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -118,13 +119,7 @@ export default function DashboardPage() {
 
   // Enquanto os KPIs carregam, mostra um spinner em vez de piscar R$ 0 (antes a
   // tela renderizava zerada e "saltava" para os valores reais).
-  if (loading) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "60vh" }}>
-        <div className="fp-spin" style={{ width: "28px", height: "28px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%" }} />
-      </div>
-    )
-  }
+  if (loading) return <ScreenLoader />
 
   const days   = daysBetween(range.start, range.end)
   const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
