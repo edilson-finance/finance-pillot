@@ -7,6 +7,7 @@ import { Plus, Search, Edit2, Eye, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Customer } from "@/lib/db/customers"
 import { createCustomer, updateCustomer, deleteCustomer } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const stCfg: Record<string, { label: string; c: string; bg: string }> = {
   ativo:       { label:"Ativo",       c:"var(--success)", bg:"var(--success-soft)" },
@@ -182,6 +183,17 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
                 </tr>
               )
             })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={9} style={{ padding: 0 }}>
+                <EmptyState
+                  title={q ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                  description={q ? "Tente ajustar a busca." : "Cadastre o primeiro cliente para vincular às suas cobranças."}
+                  action={q ? undefined : (
+                    <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo cliente</button>
+                  )}
+                />
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
