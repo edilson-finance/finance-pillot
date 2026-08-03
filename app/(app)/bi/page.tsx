@@ -8,6 +8,7 @@ import {
 } from "recharts"
 import { Download, TrendingUp, TrendingDown, Info, Plus, X, Check } from "lucide-react"
 import { useTopClients, useTopExpenses } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import {
@@ -335,7 +336,7 @@ export default function BiPage() {
 
   /* ── Dados filtrados pelo período selecionado ── */
   const { series } = useRevenueSeries(range)
-  const { kpis }   = useKpis(range)
+  const { kpis, loading }   = useKpis(range)
   const { rows: topClients }  = useTopClients(range)
   const { rows: topExpenses } = useTopExpenses(range)
   const { data: periodCmp }   = usePeriodComparison(range)
@@ -343,6 +344,9 @@ export default function BiPage() {
   const { data: projection }  = useCashflowProjection(13)
   const [drillDim, setDrillDim] = useState<"categoria"|"centro_custo"|"cliente"|"fornecedor">("categoria")
   const { rows: drillRows }   = useDrilldown(range, drillDim)
+
+  if (loading) return <ScreenLoader />
+
   const days     = daysBetween(range.start, range.end)
 
   const totalReceita  = series.reduce((s,d) => s + d.receita, 0)
