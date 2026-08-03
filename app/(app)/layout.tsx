@@ -14,11 +14,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <CompanyProvider initialType={company?.type} initialLogoUrl={company?.logo_url} initialName={company?.name}>
     <DateRangeProvider>
     <MobileNavProvider>
+      <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
       <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "var(--bg-primary)" }}>
         <Sidebar />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
           <Topbar />
-          <main style={{ flex: 1, overflowY: "auto", background: "var(--bg-primary)" }}>
+          <main id="main-content" tabIndex={-1} style={{ flex: 1, overflowY: "auto", background: "var(--bg-primary)", outline: "none" }}>
             {children}
           </main>
         </div>

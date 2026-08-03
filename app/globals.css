@@ -141,6 +141,26 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
+/* ── Skip-link (a11y — WCAG 2.4.1) ──
+   Link "pular para o conteúdo" escondido até receber foco por teclado, para o
+   usuário não precisar tabular por toda a sidebar a cada página. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 9999;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 8px;
+}
+
 /* ─────────────────────────────────────────
    Responsividade global
    As páginas usam inline styles (sem classes),
