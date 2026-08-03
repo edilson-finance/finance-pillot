@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useDialogA11y } from "@/lib/use-dialog-a11y"
 import type { AdminUser, UserCompanyLink } from "@/lib/db/admin"
 import { createUser, setUserCompany, unlinkUserCompany, getUserCompanies, updateUser } from "../actions"
 
@@ -212,6 +213,7 @@ function EditUserModal({
     })
   }
 
+  const dialogRef = useDialogA11y<HTMLDivElement>(onClose)
   const overlay: React.CSSProperties = {
     position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
     display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px",
@@ -231,7 +233,7 @@ function EditUserModal({
 
   return (
     <div style={overlay} onClick={onClose}>
-      <div style={modal} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Editar usuário" tabIndex={-1} style={{ ...modal, outline: "none" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ fontSize: "16px", fontWeight: 800, color: "var(--text-primary)" }}>Editar usuário</h2>
           <button onClick={onClose} style={{
