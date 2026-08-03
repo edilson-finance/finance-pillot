@@ -161,6 +161,17 @@ textarea:focus-visible,
   left: 8px;
 }
 
+/* Conteúdo só para leitor de tela (visualmente escondido, mas anunciado). */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─────────────────────────────────────────
    Responsividade global
    As páginas usam inline styles (sem classes),
