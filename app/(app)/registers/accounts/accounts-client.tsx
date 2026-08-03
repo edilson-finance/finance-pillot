@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, RefreshCw, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Account } from "@/lib/db/accounts"
@@ -20,6 +21,7 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
 
 export default function AccountsClient({ accounts }: { accounts: Account[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
@@ -68,10 +70,10 @@ export default function AccountsClient({ accounts }: { accounts: Account[] }) {
   }
 
   async function handleDelete(a: Account) {
-    if (!window.confirm(`Excluir a conta "${a.name}"?`)) return
+    if (!(await confirm(`Excluir a conta "${a.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteAccount(a.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

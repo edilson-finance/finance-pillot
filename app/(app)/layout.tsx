@@ -4,6 +4,7 @@ import { DateRangeProvider } from "@/lib/date-context"
 import { CompanyProvider } from "@/lib/company-context"
 import { SessionProvider } from "@/lib/session-context"
 import { MobileNavProvider } from "@/lib/mobile-nav"
+import { DialogProvider } from "@/lib/dialog"
 import { getSessionContext } from "@/lib/auth"
 import { getCompanySettings } from "@/lib/db/company"
 
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <CompanyProvider initialType={company?.type} initialLogoUrl={company?.logo_url} initialName={company?.name}>
     <DateRangeProvider>
     <MobileNavProvider>
+    <DialogProvider>
       <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
       <div style={{ display: "flex", height: "100dvh", overflow: "hidden", background: "var(--bg-primary)" }}>
         <Sidebar />
@@ -24,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+    </DialogProvider>
     </MobileNavProvider>
     </DateRangeProvider>
     </CompanyProvider>

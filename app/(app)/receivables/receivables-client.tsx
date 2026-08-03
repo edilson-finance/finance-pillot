@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Check, Edit2, X, AlertCircle, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Receivable } from "@/lib/db/receivables"
@@ -61,6 +62,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   partnerReceiversEnabled: boolean
 }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   // Mobile: lista vira cards (ver bloco isMobile abaixo) em vez da tabela cortada.
   const { isMobile } = useMobileNav()
   const [filter, setFilter] = useState("todos")
@@ -107,16 +109,16 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   }
 
   async function handleDelete(r: Receivable) {
-    if (!window.confirm(`Excluir a cobrança "${r.description ?? r.id}"?`)) return
+    if (!(await confirm(`Excluir a cobrança "${r.description ?? r.id}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteReceivable(r.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   async function handleReceive(r: Receivable) {
     const res = await markReceived(r.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

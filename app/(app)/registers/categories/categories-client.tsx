@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Pencil, Trash2, ChevronRight, X, Settings, Sparkles } from "lucide-react"
 import type { CategoryNode, CategoryTree, CategoryAba } from "@/lib/db/categories"
 import { createCategory, updateCategory, deleteCategory, seedDefaults } from "./actions"
@@ -91,6 +92,7 @@ type FormState =
 
 export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [activeAba, setActiveAba] = useState<CategoryAba>("receita")
   const [q, setQ] = useState("")
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -138,12 +140,12 @@ export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
     })
   }
 
-  function handleDelete(node: CategoryNode) {
-    if (!window.confirm(`Excluir "${node.name}"?`)) return
+  async function handleDelete(node: CategoryNode) {
+    if (!(await confirm(`Excluir "${node.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     startTransition(async () => {
       const res = await deleteCategory(node.id)
       if (res.ok) router.refresh()
-      else window.alert(res.error)
+      else void alert(res.error ?? "Não foi possível excluir.", { title: "Erro" })
     })
   }
 

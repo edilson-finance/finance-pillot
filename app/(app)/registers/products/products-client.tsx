@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Product } from "@/lib/db/products"
@@ -16,6 +17,7 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
 
 export default function ProductsClient({ products }: { products: Product[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
@@ -60,10 +62,10 @@ export default function ProductsClient({ products }: { products: Product[] }) {
   }
 
   async function handleDelete(p: Product) {
-    if (!window.confirm(`Excluir o item "${p.name}"?`)) return
+    if (!(await confirm(`Excluir o item "${p.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteProduct(p.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

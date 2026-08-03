@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Partner } from "@/lib/db/partners"
@@ -20,6 +21,7 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
 
 export default function PartnersClient({ partners }: { partners: Partner[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Partner | null>(null)
@@ -51,10 +53,10 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
   }
 
   async function handleDelete(p: Partner) {
-    if (!window.confirm(`Excluir o recebedor "${p.name}"?`)) return
+    if (!(await confirm(`Excluir o recebedor "${p.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deletePartner(p.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

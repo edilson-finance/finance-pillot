@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { CostCenter } from "@/lib/db/cost-centers"
@@ -15,6 +16,7 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
 
 export default function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CostCenter | null>(null)
@@ -62,10 +64,10 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
   }
 
   async function handleDelete(c: CostCenter) {
-    if (!window.confirm(`Excluir o centro de custo "${c.name}"?`)) return
+    if (!(await confirm(`Excluir o centro de custo "${c.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteCostCenter(c.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

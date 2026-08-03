@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, Eye, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Customer } from "@/lib/db/customers"
@@ -22,6 +23,7 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
 
 export default function CustomersClient({ customers }: { customers: Customer[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
@@ -69,10 +71,10 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
   }
 
   async function handleDelete(c: Customer) {
-    if (!window.confirm(`Excluir o cliente "${c.name}"?`)) return
+    if (!(await confirm(`Excluir o cliente "${c.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteCustomer(c.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (

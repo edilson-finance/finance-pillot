@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Download, Check, Edit2, X, AlertCircle, Clock, CheckCircle2, Trash2 } from "lucide-react"
 import type { Payable } from "@/lib/db/payables"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -65,6 +66,7 @@ export default function PayablesClient({ payables, suppliers, categories, accoun
   products: Prod[]
 }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const { isMobile } = useMobileNav()
   const [filter, setFilter] = useState("todos")
   const [q, setQ] = useState("")
@@ -98,16 +100,16 @@ export default function PayablesClient({ payables, suppliers, categories, accoun
   }
 
   async function handleDelete(p: Payable) {
-    if (!window.confirm(`Excluir a conta "${p.description ?? p.id}"?`)) return
+    if (!(await confirm(`Excluir a conta "${p.description ?? p.id}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deletePayable(p.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   async function handleMarkPaid(p: Payable) {
     const res = await markPaid(p.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   const filtered = payables
