@@ -116,10 +116,20 @@ function Status({ name, options, color, value, onChange }: {
 }
 
 function Check({ checked, onChange, label }: { checked: boolean; onChange: (b: boolean) => void; label: string }) {
+  // Input real (acessível por teclado + leitor de tela) visualmente escondido e
+  // sobreposto ao indicador visual. O <label> envolve tudo, então clicar e o
+  // Espaço alternam o estado, e o rótulo é o nome acessível. O foco por teclado
+  // aparece pelo :focus-visible global.
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: "9px", cursor: "pointer", fontSize: "13px", color: "var(--text-secondary)" }}>
-      <span onClick={() => onChange(!checked)} style={{
-        width: "18px", height: "18px", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center",
+    <label style={{ position: "relative", display: "flex", alignItems: "center", gap: "9px", cursor: "pointer", fontSize: "13px", color: "var(--text-secondary)" }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: "18px", height: "18px", margin: 0, opacity: 0, cursor: "pointer" }}
+      />
+      <span aria-hidden="true" style={{
+        width: "18px", height: "18px", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", flex: "none",
         border: `1.5px solid ${checked ? "var(--accent)" : "var(--border)"}`, background: checked ? "var(--accent)" : "transparent",
       }}>{checked && <CheckIcon size={12} color="#fff" />}</span>
       {label}
