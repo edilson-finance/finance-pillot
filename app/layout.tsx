@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body style={{ margin: 0, padding: 0, height: "100%", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+      <body suppressHydrationWarning style={{ margin: 0, padding: 0, height: "100%", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
         {children}
       </body>
     </html>
