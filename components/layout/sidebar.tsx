@@ -79,6 +79,7 @@ function NavItem({
   const { href, label, icon: Icon, badge } = entry
   const active = pathname === href || (href !== "/" && pathname.startsWith(href))
   const [hover, setHover] = useState(false)
+  const { isMobile } = useMobileNav()
 
   return (
     <div
@@ -120,7 +121,7 @@ function NavItem({
           border: "none", background: "transparent", cursor: "pointer",
           padding: "6px 8px", display: "flex", alignItems: "center", flexShrink: 0,
           color: isFav ? "var(--warning)" : "var(--text-muted)",
-          opacity: isFav || hover ? 1 : 0,
+          opacity: isFav || hover || isMobile ? 1 : 0,
           transition: "opacity 0.13s, color 0.13s",
         }}>
         <Star size={13} fill={isFav ? "var(--warning)" : "none"} />
