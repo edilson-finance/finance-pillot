@@ -109,12 +109,23 @@ function compactCurrency(value: number) {
 
 export default function DashboardPage() {
   const { range } = useDateRange()
-  const { kpis } = useKpis(range)
+  const { kpis, loading } = useKpis(range)
   const { series } = useRevenueSeries(range)
   const { rows: topClients } = useTopClients(range)
   const { rows: topExpenses } = useTopExpenses(range)
   const { rows: cashRows } = useCashflow(range)
   const { dims: healthDimensions } = useHealthDimensions()
+
+  // Enquanto os KPIs carregam, mostra um spinner em vez de piscar R$ 0 (antes a
+  // tela renderizava zerada e "saltava" para os valores reais).
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "60vh" }}>
+        <div className="fp-spin" style={{ width: "28px", height: "28px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%" }} />
+      </div>
+    )
+  }
+
   const days   = daysBetween(range.start, range.end)
   const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
   const liquidoSeries = series.map(d => ({ ...d, liquido: d.receita - d.despesa }))
