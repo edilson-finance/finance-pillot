@@ -7,6 +7,7 @@ import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Product } from "@/lib/db/products"
 import { createProduct, updateProduct, deleteProduct } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const R = (v:number) => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v)
 
@@ -168,6 +169,17 @@ export default function ProductsClient({ products }: { products: Product[] }) {
                 </tr>
               )
             })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={7} style={{ padding: 0 }}>
+                <EmptyState
+                  title={q ? "Nenhum item encontrado" : "Nenhum produto ou serviço cadastrado"}
+                  description={q ? "Tente ajustar a busca." : "Cadastre produtos e serviços para detalhar seus lançamentos."}
+                  action={q ? undefined : (
+                    <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo item</button>
+                  )}
+                />
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>

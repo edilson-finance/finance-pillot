@@ -7,6 +7,7 @@ import { ChevronLeft, Plus, Edit2, X, Search, Info, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { AccountPlan } from "@/lib/db/accounts-plan"
 import { createAccountPlan, updateAccountPlan, deleteAccountPlan } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const KIND_LABEL: Record<string, { l: string; c: string }> = {
   receita:  { l: "Receita",  c: "var(--success)" },
@@ -214,6 +215,17 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
                 </tr>
               )
             })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} style={{ padding: 0 }}>
+                <EmptyState
+                  title={q ? "Nenhuma conta encontrada" : "Nenhuma conta no plano"}
+                  description={q ? "Tente ajustar a busca." : "Cadastre a estrutura do plano de contas (DRE/NBC)."}
+                  action={q ? undefined : (
+                    <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Nova conta</button>
+                  )}
+                />
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
