@@ -8,6 +8,7 @@ import Link from "next/link"
 import type { Account } from "@/lib/db/accounts"
 import { BR_BANKS, brBankLabel } from "@/lib/br-banks"
 import { createAccount, updateAccount, deleteAccount } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const R = (v:number) => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:0}).format(v)
 
@@ -183,6 +184,15 @@ export default function AccountsClient({ accounts }: { accounts: Account[] }) {
             </div>
           )
         })}
+        {filtered.length === 0 && (
+          <EmptyState
+            title={q ? "Nenhuma conta encontrada" : "Nenhuma conta cadastrada"}
+            description={q ? "Tente ajustar a busca." : "Cadastre suas contas bancárias e caixas para registrar as movimentações."}
+            action={q ? undefined : (
+              <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Nova conta</button>
+            )}
+          />
+        )}
       </div>
     </div>
   )

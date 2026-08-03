@@ -7,6 +7,7 @@ import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { CostCenter } from "@/lib/db/cost-centers"
 import { createCostCenter, updateCostCenter, deleteCostCenter } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
@@ -164,6 +165,15 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
             </div>
           </div>
         ))}
+        {filtered.length === 0 && (
+          <EmptyState
+            title={q ? "Nenhum centro encontrado" : "Nenhum centro de custo cadastrado"}
+            description={q ? "Tente ajustar a busca." : "Crie centros de custo (obras, projetos, filiais) para ratear seus lançamentos."}
+            action={q ? undefined : (
+              <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo centro</button>
+            )}
+          />
+        )}
       </div>
     </div>
   )

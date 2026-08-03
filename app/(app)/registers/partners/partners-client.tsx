@@ -7,6 +7,7 @@ import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Partner } from "@/lib/db/partners"
 import { createPartner, updatePartner, deletePartner } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const stCfg: Record<string, { label: string; c: string; bg: string }> = {
   ativo:   { label:"Ativo",   c:"var(--success)",    bg:"var(--success-soft)" },
@@ -110,9 +111,13 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
       {/* Lista */}
       <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",overflow:"hidden" }}>
         {filtered.length === 0 ? (
-          <div style={{ padding:"32px 18px",textAlign:"center",fontSize:"12.5px",color:"var(--text-muted)" }}>
-            Nenhum recebedor cadastrado. Clique em "Novo recebedor" para adicionar o primeiro.
-          </div>
+          <EmptyState
+            title={q ? "Nenhum recebedor encontrado" : "Nenhum recebedor cadastrado"}
+            description={q ? "Tente ajustar a busca." : "Cadastre recebedores para os repasses — parceiros que recebem parte das cobranças."}
+            action={q ? undefined : (
+              <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo recebedor</button>
+            )}
+          />
         ) : (
         <table style={{ width:"100%",borderCollapse:"collapse" }}>
           <thead>
