@@ -9,8 +9,8 @@ import { createCostCenter, updateCostCenter, deleteCostCenter } from "./actions"
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
@@ -106,8 +106,8 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Obra 10 — Incorporadora Sul" style={inp}/></div>
-            <div><Label>Código</Label><input name="code" id="code" type="text" defaultValue={editing?.code ?? ""} placeholder="Ex: CC-010" style={inp}/></div>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Obra 10 — Incorporadora Sul" style={inp}/></div>
+            <div><Label htmlFor="code">Código</Label><input name="code" id="code" type="text" defaultValue={editing?.code ?? ""} placeholder="Ex: CC-010" style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>

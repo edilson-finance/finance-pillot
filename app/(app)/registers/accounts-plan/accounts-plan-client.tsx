@@ -16,8 +16,8 @@ const KIND_LABEL: Record<string, { l: string; c: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"9px 12px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) {
@@ -132,15 +132,15 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
             <div>
-              <Label>Código *</Label>
+              <Label htmlFor="code">Código *</Label>
               <input name="code" id="code" type="text" required defaultValue={editing?.code ?? ""} placeholder="Ex: 5.2.11" style={inp}/>
             </div>
             <div style={{ gridColumn:"span 2" }}>
-              <Label>Nome da Conta *</Label>
+              <Label htmlFor="name">Nome da Conta *</Label>
               <input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Despesas com Combustível" style={inp}/>
             </div>
             <div>
-              <Label>Tipo</Label>
+              <Label htmlFor="kind">Tipo</Label>
               <select name="kind" id="kind" defaultValue={editing?.kind ?? ""} style={inp}>
                 <option value="">(nenhum)</option>
                 <option value="receita">Receita</option>
@@ -150,7 +150,7 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
               </select>
             </div>
             <div style={{ gridColumn:"span 2" }}>
-              <Label>Conta Pai</Label>
+              <Label htmlFor="parent_id">Conta Pai</Label>
               <select name="parent_id" id="parent_id" defaultValue={editing?.parent_id ?? ""} style={inp}>
                 <option value="">(nenhuma)</option>
                 {items.filter(c => c.id !== editing?.id).map(c=>(

@@ -10,8 +10,8 @@ import { createProduct, updateProduct, deleteProduct } from "./actions"
 const R = (v:number) => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v)
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function ProductsClient({ products }: { products: Product[] }) {
@@ -104,15 +104,15 @@ export default function ProductsClient({ products }: { products: Product[] }) {
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Consultoria técnica por hora" style={inp}/></div>
-            <div><Label>Tipo</Label>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Consultoria técnica por hora" style={inp}/></div>
+            <div><Label htmlFor="kind">Tipo</Label>
               <select name="kind" id="kind" defaultValue={editing?.kind ?? "produto"} style={inp}>
                 <option value="produto">Produto</option>
                 <option value="servico">Serviço</option>
               </select>
             </div>
-            <div><Label>Preço (R$)</Label><input name="price" id="price" type="number" step="0.01" min="0" defaultValue={editing?.price ?? 0} placeholder="0,00" style={inp}/></div>
-            <div><Label>Unidade</Label><input name="unit" id="unit" type="text" defaultValue={editing?.unit ?? ""} placeholder="Un, Kg, Hora, m²..." style={inp}/></div>
+            <div><Label htmlFor="price">Preço (R$)</Label><input name="price" id="price" type="number" step="0.01" min="0" defaultValue={editing?.price ?? 0} placeholder="0,00" style={inp}/></div>
+            <div><Label htmlFor="unit">Unidade</Label><input name="unit" id="unit" type="text" defaultValue={editing?.unit ?? ""} placeholder="Un, Kg, Hora, m²..." style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>

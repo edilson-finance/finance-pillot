@@ -15,8 +15,8 @@ const stCfg: Record<string, { label: string; c: string; bg: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function SuppliersClient({ suppliers }: { suppliers: Supplier[] }) {
@@ -112,11 +112,11 @@ export default function SuppliersClient({ suppliers }: { suppliers: Supplier[] }
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Razão Social / Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Fornecedor Exemplo Ltda" style={inp}/></div>
-            <div><Label>CPF / CNPJ</Label><input name="document" id="document" type="text" defaultValue={editing?.document ?? ""} placeholder="00.000.000/0001-00" style={inp}/></div>
-            <div><Label>E-mail</Label><input name="email" id="email" type="email" defaultValue={editing?.email ?? ""} placeholder="financeiro@fornecedor.com.br" style={inp}/></div>
-            <div><Label>Telefone</Label><input name="phone" id="phone" type="text" defaultValue={editing?.phone ?? ""} placeholder="(11) 99999-9999" style={inp}/></div>
-            <div><Label>Status</Label>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Razão Social / Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Fornecedor Exemplo Ltda" style={inp}/></div>
+            <div><Label htmlFor="document">CPF / CNPJ</Label><input name="document" id="document" type="text" defaultValue={editing?.document ?? ""} placeholder="00.000.000/0001-00" style={inp}/></div>
+            <div><Label htmlFor="email">E-mail</Label><input name="email" id="email" type="email" defaultValue={editing?.email ?? ""} placeholder="financeiro@fornecedor.com.br" style={inp}/></div>
+            <div><Label htmlFor="phone">Telefone</Label><input name="phone" id="phone" type="text" defaultValue={editing?.phone ?? ""} placeholder="(11) 99999-9999" style={inp}/></div>
+            <div><Label htmlFor="status">Status</Label>
               <select name="status" id="status" defaultValue={editing?.status ?? "ativo"} style={inp}>
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>

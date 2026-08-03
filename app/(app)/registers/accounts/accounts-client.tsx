@@ -14,8 +14,8 @@ const kindLabels: Record<string,string> = { corrente:"Conta Corrente",poupanca:"
 const kindColors: Record<string,string> = { corrente:"var(--accent)",poupanca:"var(--info)",caixa:"var(--warning)",investimento:"var(--success)" }
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function AccountsClient({ accounts }: { accounts: Account[] }) {
@@ -123,18 +123,18 @@ export default function AccountsClient({ accounts }: { accounts: Account[] }) {
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Nome interno *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder='Ex: "Bradesco Principal", "Caixa Escritório"' style={inp}/></div>
-            <div><Label>Tipo de Conta *</Label>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Nome interno *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder='Ex: "Bradesco Principal", "Caixa Escritório"' style={inp}/></div>
+            <div><Label htmlFor="kind">Tipo de Conta *</Label>
               <select name="kind" id="kind" defaultValue={editing?.kind ?? "corrente"} style={inp}>
                 {Object.entries(kindLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}
               </select>
             </div>
-            <div><Label>Banco / Instituição</Label><input name="bank" id="bank" type="text" list="brBanks" autoComplete="off" defaultValue={editing?.bank ?? ""} placeholder="Digite o nome ou código (ex: 237, Bradesco)..." style={inp}/>
+            <div><Label htmlFor="bank">Banco / Instituição</Label><input name="bank" id="bank" type="text" list="brBanks" autoComplete="off" defaultValue={editing?.bank ?? ""} placeholder="Digite o nome ou código (ex: 237, Bradesco)..." style={inp}/>
               <datalist id="brBanks">
                 {BR_BANKS.map(b => <option key={`${b.code}-${b.name}`} value={brBankLabel(b)} />)}
               </datalist>
             </div>
-            <div><Label>Saldo inicial (R$)</Label><input name="opening_balance" id="opening_balance" type="number" step="0.01" defaultValue={editing?.opening_balance ?? 0} placeholder="0,00" style={inp}/></div>
+            <div><Label htmlFor="opening_balance">Saldo inicial (R$)</Label><input name="opening_balance" id="opening_balance" type="number" step="0.01" defaultValue={editing?.opening_balance ?? 0} placeholder="0,00" style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>

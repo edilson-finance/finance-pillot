@@ -14,8 +14,8 @@ const stCfg: Record<string, { label: string; c: string; bg: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function PartnersClient({ partners }: { partners: Partner[] }) {
@@ -80,16 +80,16 @@ export default function PartnersClient({ partners }: { partners: Partner[] }) {
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Nome *</Label><input name="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex.: João da Silva (dono do lote 7)" style={inp}/></div>
-            <div><Label>CPF / CNPJ</Label><input name="document" type="text" defaultValue={editing?.document ?? ""} placeholder="000.000.000-00" style={inp}/></div>
-            <div><Label>Chave PIX / dados de pagamento</Label><input name="pix_key" type="text" defaultValue={editing?.pix_key ?? ""} placeholder="CPF, e-mail, telefone ou banco/agência/conta" style={inp}/></div>
-            <div><Label>Status</Label>
-              <select name="status" defaultValue={editing?.status ?? "ativo"} style={inp}>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="p_name">Nome *</Label><input name="name" id="p_name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex.: João da Silva (dono do lote 7)" style={inp}/></div>
+            <div><Label htmlFor="p_document">CPF / CNPJ</Label><input name="document" id="p_document" type="text" defaultValue={editing?.document ?? ""} placeholder="000.000.000-00" style={inp}/></div>
+            <div><Label htmlFor="p_pix_key">Chave PIX / dados de pagamento</Label><input name="pix_key" id="p_pix_key" type="text" defaultValue={editing?.pix_key ?? ""} placeholder="CPF, e-mail, telefone ou banco/agência/conta" style={inp}/></div>
+            <div><Label htmlFor="p_status">Status</Label>
+              <select name="status" id="p_status" defaultValue={editing?.status ?? "ativo"} style={inp}>
                 <option value="ativo">Ativo</option>
                 <option value="inativo">Inativo</option>
               </select>
             </div>
-            <div style={{ gridColumn:"span 3" }}><Label>Observações</Label><input name="notes" type="text" defaultValue={editing?.notes ?? ""} placeholder="Ex.: repasse todo dia 10" style={inp}/></div>
+            <div style={{ gridColumn:"span 3" }}><Label htmlFor="p_notes">Observações</Label><input name="notes" id="p_notes" type="text" defaultValue={editing?.notes ?? ""} placeholder="Ex.: repasse todo dia 10" style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>

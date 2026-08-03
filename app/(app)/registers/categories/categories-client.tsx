@@ -66,8 +66,8 @@ const inp: React.CSSProperties = {
   color: "var(--text-primary)", outline: "none", fontFamily: "inherit",
 }
 
-function Label({ children }: { children: string }) {
-  return <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>{children}</label>
 }
 
 /* ── Helpers de árvore ── */
@@ -229,13 +229,13 @@ export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: form.mode === "create-child" ? "1fr" : "1fr 1fr", gap: "14px" }}>
             <div>
-              <Label>Nome *</Label>
-              <input name="name" type="text" required autoFocus defaultValue={form.mode === "edit" ? form.node.name : ""} placeholder="Ex: Materiais de construção" style={inp} />
+              <Label htmlFor="cat_name">Nome *</Label>
+              <input name="name" id="cat_name" type="text" required autoFocus defaultValue={form.mode === "edit" ? form.node.name : ""} placeholder="Ex: Materiais de construção" style={inp} />
             </div>
             {form.mode !== "create-child" && (
               <div>
-                <Label>Grupo na DRE *</Label>
-                <select name="grupo" required defaultValue={form.mode === "edit" ? form.node.grupo ?? "" : ""} style={inp}>
+                <Label htmlFor="cat_grupo">Grupo na DRE *</Label>
+                <select name="grupo" id="cat_grupo" required defaultValue={form.mode === "edit" ? form.node.grupo ?? "" : ""} style={inp}>
                   <option value="" disabled>Selecione...</option>
                   {GRUPOS_POR_ABA[activeAba].map((g) => (
                     <option key={g.grupo} value={g.grupo}>{g.label}</option>
