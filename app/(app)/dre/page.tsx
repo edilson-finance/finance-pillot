@@ -5,108 +5,11 @@ import { ChevronRight, Download, Settings2, Eye, EyeOff, TrendingUp, TrendingDow
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { useDre } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { exportCsv, exportPdf, type ExportColumn } from "@/lib/export"
 import Link from "next/link"
 
 const R = formatCurrency
-
-/* ── Estrutura DRE padrão brasileiro ── */
-const DRE_ESTRUTURA = [
-  {
-    id:"receita_bruta", label:"Receita Bruta de Vendas e Serviços",
-    tipo:"total", valor:312000, pct:100,
-    filhos:[
-      { id:"servicos",   label:"Prestação de Serviços", valor:248000, pct:79.5 },
-      { id:"contratos",  label:"Contratos Mensais",     valor:64000,  pct:20.5 },
-    ]
-  },
-  {
-    id:"deducoes", label:"(–) Deduções da Receita",
-    tipo:"negativo", valor:-18096, pct:-5.8,
-    filhos:[
-      { id:"iss",    label:"ISS sobre Serviços",              valor:-4992,  pct:-1.6 },
-      { id:"piscof", label:"PIS e COFINS",                    valor:-8352,  pct:-2.7 },
-      { id:"simples",label:"Simples Nacional s/ Receita",     valor:-4752,  pct:-1.5 },
-    ]
-  },
-  { id:"rec_liquida", label:"= Receita Líquida", tipo:"resultado", valor:293904, pct:94.2 },
-  {
-    id:"csp", label:"(–) Custo dos Serviços Prestados (CSP)",
-    tipo:"negativo", valor:-176800, pct:-56.7,
-    filhos:[
-      { id:"mao_obra",    label:"Mão de Obra Direta",          valor:-72400, pct:-23.2 },
-      { id:"materiais",   label:"Materiais e Insumos",          valor:-62800, pct:-20.1 },
-      { id:"terceiros",   label:"Subcontratados / Terceiros",   valor:-41600, pct:-13.3 },
-    ]
-  },
-  { id:"lucro_bruto", label:"= Lucro Bruto", tipo:"destaque", valor:117104, pct:37.5 },
-  {
-    id:"desp_pessoal", label:"(–) Despesas com Pessoal",
-    tipo:"negativo", valor:-43000, pct:-13.8,
-    filhos:[
-      { id:"salarios",    label:"Salários e Ordenados",         valor:-31000, pct:-9.9 },
-      { id:"encargos",    label:"Encargos Sociais (INSS, FGTS)",valor:-8400,  pct:-2.7 },
-      { id:"beneficios",  label:"Benefícios (VT, VR, Saúde)",   valor:-3600,  pct:-1.2 },
-    ]
-  },
-  {
-    id:"desp_adm", label:"(–) Despesas Administrativas",
-    tipo:"negativo", valor:-8400, pct:-2.7,
-    filhos:[
-      { id:"aluguel",     label:"Aluguel e Condomínio",         valor:-8400,  pct:-2.7 },
-      { id:"telecom",     label:"Telefonia e Internet",         valor:-890,   pct:-0.3 },
-      { id:"software",    label:"Softwares e Sistemas",         valor:-1240,  pct:-0.4 },
-    ]
-  },
-  {
-    id:"desp_comerc", label:"(–) Despesas Comerciais e Marketing",
-    tipo:"negativo", valor:-4300, pct:-1.4,
-    filhos:[
-      { id:"mkt",         label:"Marketing Digital",            valor:-2800,  pct:-0.9 },
-      { id:"comiss",      label:"Comissões sobre Vendas",       valor:-1500,  pct:-0.5 },
-    ]
-  },
-  { id:"ebitda", label:"= EBITDA", tipo:"destaque", valor:61404, pct:19.7 },
-  {
-    id:"depreciacao", label:"(–) Depreciação e Amortização",
-    tipo:"negativo", valor:-3200, pct:-1.0,
-    filhos:[
-      { id:"dep_imob", label:"Depreciação de Equipamentos",     valor:-2400,  pct:-0.8 },
-      { id:"amort",    label:"Amortização de Intangíveis",      valor:-800,   pct:-0.3 },
-    ]
-  },
-  { id:"ebit", label:"= EBIT — Resultado Operacional", tipo:"resultado", valor:58204, pct:18.7 },
-  {
-    id:"rec_fin", label:"(+) Receitas Financeiras",
-    tipo:"positivo", valor:1200, pct:0.4,
-    filhos:[
-      { id:"rend_aplic", label:"Rendimentos de Aplicações",     valor:1200,   pct:0.4 },
-    ]
-  },
-  {
-    id:"desp_fin", label:"(–) Despesas Financeiras",
-    tipo:"negativo", valor:-17200, pct:-5.5,
-    filhos:[
-      { id:"juros",       label:"Juros sobre Empréstimos",      valor:-14200, pct:-4.6 },
-      { id:"tarifas",     label:"Tarifas Bancárias e IOF",      valor:-3000,  pct:-1.0 },
-    ]
-  },
-  { id:"lair", label:"= LAIR — Antes do IR e CSLL", tipo:"resultado", valor:42204, pct:13.5 },
-  {
-    id:"ir_csll", label:"(–) IR e CSLL",
-    tipo:"negativo", valor:-23804, pct:-7.6,
-    filhos:[
-      { id:"irpj",   label:"IRPJ — Imposto de Renda PJ",       valor:-14280, pct:-4.6 },
-      { id:"csll",   label:"CSLL — Contribuição Social",        valor:-9524,  pct:-3.1 },
-    ]
-  },
-  {
-    id:"retir", label:"(–) Retiradas dos Sócios / Pró-labore",
-    tipo:"negativo", valor:-0, pct:-0, // incluso em desp_pessoal
-    filhos:[]
-  },
-  { id:"lucro_liq", label:"= LUCRO LÍQUIDO DO EXERCÍCIO", tipo:"lucro", valor:18400, pct:5.9 },
-]
 
 // Linhas que compõem cada seção — para filtros
 const SECOES = [
@@ -196,7 +99,7 @@ export default function DrePage() {
     })
   }
 
-  const { dre } = useDre(range)
+  const { dre, loading } = useDre(range)
 
   const dreNodes: DreRow[] = useMemo(() => dre.map((n, i) => ({
     id: n.id ?? `n${i}`,
@@ -252,6 +155,10 @@ export default function DrePage() {
     { header:"Valor",             value:(r)=>R(r.valor), align:"right" },
     { header:"% Receita",         value:(r)=>r.pct!==0?`${r.pct.toFixed(1)}%`:"—", align:"right" },
   ]
+
+  // Gate DEPOIS de todos os hooks (inclusive os useMemo) para não quebrar a ordem
+  // de hooks do React. Evita piscar zeros enquanto a DRE carrega.
+  if (loading) return <ScreenLoader />
 
   return (
     <div style={{ padding:"22px" }}>
