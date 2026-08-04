@@ -161,6 +161,27 @@ textarea:focus-visible,
   left: 8px;
 }
 
+/* ── Alvos de toque (a11y — WCAG 2.5.5) ──
+   Botões de ícone (topbar 32px, ações de tabela 26–28px) são pequenos demais para
+   o dedo. No touch, expandimos a ÁREA CLICÁVEL com um pseudo-elemento centrado de
+   44px, sem alterar o tamanho visual do botão nem quebrar o layout das tabelas. */
+@media (pointer: coarse) {
+  main button, header button, aside button {
+    position: relative;
+  }
+  main button::after, header button::after, aside button::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 /* Conteúdo só para leitor de tela (visualmente escondido, mas anunciado). */
 .sr-only {
   position: absolute;
