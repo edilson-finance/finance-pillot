@@ -9,6 +9,9 @@ import { listPartners } from "@/lib/db/partners"
 import { getCompanySettings } from "@/lib/db/company"
 import ReceivablesClient from "./receivables-client"
 
+export const metadata = { title: "Contas a Receber" }
+
+
 export default async function ReceivablesPage() {
   const [receivables, customers, categories, accounts, costCenters, suppliers, products, partners, company] = await Promise.all([
     listReceivables(),

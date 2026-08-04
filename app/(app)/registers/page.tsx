@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { getCompanySettings } from "@/lib/db/company"
 import RegistersClient from "./registers-client"
 
+export const metadata = { title: "Cadastros" }
+
+
 const TABLES: Record<string, string> = {
   "/registers/categories":   "categories",
   "/registers/cost-centers": "cost_centers",

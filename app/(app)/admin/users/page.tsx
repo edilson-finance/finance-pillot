@@ -3,6 +3,9 @@ import { redirect } from "next/navigation"
 import { listAllUsers, listCompaniesOverview } from "@/lib/db/admin"
 import AdminUsersClient from "./admin-users-client"
 
+export const metadata = { title: "Usuários (Admin)" }
+
+
 export default async function AdminUsersPage() {
   const session = await getSessionContext()
   if (session.role !== "super_admin") redirect("/dashboard")

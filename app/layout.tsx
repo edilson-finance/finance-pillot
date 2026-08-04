@@ -5,7 +5,12 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "wiqfy — Gestão Financeira Inteligente",
+  // `template` compõe o título das páginas que definem o seu (ex.: "Contas a
+  // Pagar · wiqfy"); `default` vale para as que não definem.
+  title: {
+    default: "wiqfy — Gestão Financeira Inteligente",
+    template: "%s · wiqfy",
+  },
   description: "Copiloto financeiro para PMEs brasileiras",
 }
 
