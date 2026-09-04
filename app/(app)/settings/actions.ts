@@ -31,6 +31,32 @@ async function companyId(supabase: SupabaseClient): Promise<string | null> {
   return data?.company_id ?? null
 }
 
+// Empresa + papel do próprio usuário, numa query. Usado onde a escrita passa pela
+// chave service_role (Storage do logo), que ignora a RLS — então o papel precisa
+// ser checado na própria action, senão qualquer membro fura a policy admin-only.
+async function companyAndRole(
+  supabase: SupabaseClient,
+): Promise<{ id: string | null; role: string | null }> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { id: null, role: null }
+  const { data } = await supabase
+    .from("profiles").select("company_id, role").eq("id", user.id).maybeSingle()
+  return { id: data?.company_id ?? null, role: (data?.role as string) ?? null }
+}
+
+function isAdmin(role: string | null): boolean {
+  return role === "admin" || role === "super_admin"
+}
+
+// Allowlist de imagem para o logo. SVG fica de FORA de propósito: o bucket é
+// público e um SVG pode carregar <script> (XSS na origem do Storage). A extensão
+// do arquivo salvo é derivada daqui (do MIME validado), nunca do nome enviado.
+const LOGO_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+}
+
 export interface CompanyInput {
   name?: string
   type?: string
@@ -99,9 +125,11 @@ export async function uploadCompanyLogo(
   formData: FormData,
 ): Promise<Result & { url?: string }> {
   const supabase = await createClient()
-  await supabase.auth.getUser()
-  const id = await companyId(supabase)
+  const { id, role } = await companyAndRole(supabase)
   if (!id) return { ok: false, error: "Empresa não identificada." }
+  if (!isAdmin(role)) {
+    return { ok: false, error: "Apenas administradores podem alterar o logo." }
+  }
 
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) {
@@ -110,11 +138,11 @@ export async function uploadCompanyLogo(
   if (file.size > 2 * 1024 * 1024) {
     return { ok: false, error: "Arquivo muito grande. Máximo 2MB." }
   }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: "Envie um arquivo de imagem (PNG, JPG ou SVG)." }
+  const ext = LOGO_MIME[file.type]
+  if (!ext) {
+    return { ok: false, error: "Formato inválido. Use PNG, JPG ou WEBP." }
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png"
   const path = `${id}/logo-${Date.now()}.${ext}`
 
   // O upload roda com a chave service role: a RLS do Storage rejeita o token do
@@ -139,9 +167,11 @@ export async function uploadCompanyLogo(
 
 export async function removeCompanyLogo(): Promise<Result> {
   const supabase = await createClient()
-  await supabase.auth.getUser()
-  const id = await companyId(supabase)
+  const { id, role } = await companyAndRole(supabase)
   if (!id) return { ok: false, error: "Empresa não identificada." }
+  if (!isAdmin(role)) {
+    return { ok: false, error: "Apenas administradores podem alterar o logo." }
+  }
 
   // Remove os arquivos da pasta da empresa (best-effort) com a chave service
   // role — a RLS do Storage rejeita o token do usuário (ver admin.ts).

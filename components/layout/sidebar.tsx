@@ -37,8 +37,8 @@ const sections: Section[] = [
   {
     label: "Operação",
     items: [
-      { href: "/payables",      label: "Contas a Pagar",   icon: CreditCard, badge: "3" },
-      { href: "/receivables",   label: "Contas a Receber", icon: Wallet,     badge: "5" },
+      { href: "/payables",      label: "Contas a Pagar",   icon: CreditCard },
+      { href: "/receivables",   label: "Contas a Receber", icon: Wallet },
       { href: "/transactions",  label: "Lançamentos",      icon: TrendingUp },
       { href: "/reconciliation",label: "Conciliação",      icon: RefreshCw },
     ],
@@ -56,8 +56,8 @@ const sections: Section[] = [
     items: [
       { href: "/health",        label: "Saúde Financeira", icon: Activity },
       { href: "/diagnostic",    label: "CFO AI",           icon: BrainCircuit },
-      { href: "/delinquent",    label: "Inadimplentes",    icon: AlertTriangle, badge: "5" },
-      { href: "/alerts",        label: "Alertas",          icon: Bell, badge: "4" },
+      { href: "/delinquent",    label: "Inadimplentes",    icon: AlertTriangle },
+      { href: "/alerts",        label: "Alertas",          icon: Bell },
     ],
   },
   {
@@ -79,6 +79,7 @@ function NavItem({
   const { href, label, icon: Icon, badge } = entry
   const active = pathname === href || (href !== "/" && pathname.startsWith(href))
   const [hover, setHover] = useState(false)
+  const { isMobile } = useMobileNav()
 
   return (
     <div
@@ -120,7 +121,7 @@ function NavItem({
           border: "none", background: "transparent", cursor: "pointer",
           padding: "6px 8px", display: "flex", alignItems: "center", flexShrink: 0,
           color: isFav ? "var(--warning)" : "var(--text-muted)",
-          opacity: isFav || hover ? 1 : 0,
+          opacity: isFav || hover || isMobile ? 1 : 0,
           transition: "opacity 0.13s, color 0.13s",
         }}>
         <Star size={13} fill={isFav ? "var(--warning)" : "none"} />
@@ -209,7 +210,7 @@ export function Sidebar() {
         background: "var(--bg-secondary)",
         borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
-        height: "100vh",
+        height: "100dvh",
         position: "fixed", top: 0, left: 0,
         zIndex: 300,
         transform: open ? "translateX(0)" : "translateX(-100%)",
@@ -221,7 +222,7 @@ export function Sidebar() {
         background: "var(--bg-secondary)",
         borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
-        height: "100vh",
+        height: "100dvh",
         position: "sticky", top: 0,
         flexShrink: 0,
       }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialogA11y } from "@/lib/use-dialog-a11y"
 import { ChevronLeft, Upload, Plus, Trash2, X, Check as CheckIcon, Info } from "lucide-react"
 import Link from "next/link"
 import { createReceita, createDespesa, createTransferencia } from "./actions"
@@ -116,10 +117,20 @@ function Status({ name, options, color, value, onChange }: {
 }
 
 function Check({ checked, onChange, label }: { checked: boolean; onChange: (b: boolean) => void; label: string }) {
+  // Input real (acessível por teclado + leitor de tela) visualmente escondido e
+  // sobreposto ao indicador visual. O <label> envolve tudo, então clicar e o
+  // Espaço alternam o estado, e o rótulo é o nome acessível. O foco por teclado
+  // aparece pelo :focus-visible global.
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: "9px", cursor: "pointer", fontSize: "13px", color: "var(--text-secondary)" }}>
-      <span onClick={() => onChange(!checked)} style={{
-        width: "18px", height: "18px", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center",
+    <label style={{ position: "relative", display: "flex", alignItems: "center", gap: "9px", cursor: "pointer", fontSize: "13px", color: "var(--text-secondary)" }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: "18px", height: "18px", margin: 0, opacity: 0, cursor: "pointer" }}
+      />
+      <span aria-hidden="true" style={{
+        width: "18px", height: "18px", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", flex: "none",
         border: `1.5px solid ${checked ? "var(--accent)" : "var(--border)"}`, background: checked ? "var(--accent)" : "transparent",
       }}>{checked && <CheckIcon size={12} color="#fff" />}</span>
       {label}
@@ -447,19 +458,26 @@ function InterestField({ color }: { color: string }) {
   )
 }
 
-// modal de sucesso
-function SuccessModal({ open, title, subtitle, color, onNew, onClose }: {
+// modal de sucesso — gate separado do corpo para o hook de a11y (useEffect) rodar
+// só quando o modal abre (foco no diálogo + Esc para fechar).
+function SuccessModal(props: {
   open: boolean; title: string; subtitle: string; color: string; onNew: () => void; onClose: () => void
 }) {
-  if (!open) return null
+  if (!props.open) return null
+  return <SuccessModalBody {...props} />
+}
+function SuccessModalBody({ title, subtitle, color, onNew, onClose }: {
+  title: string; subtitle: string; color: string; onNew: () => void; onClose: () => void
+}) {
+  const dialogRef = useDialogA11y<HTMLDivElement>(onClose)
   return (
     <div onClick={onClose} style={{
       position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)",
       display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
     }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onClick={(e) => e.stopPropagation()} style={{
         width: "100%", maxWidth: "400px", background: "var(--bg-secondary)", border: "1px solid var(--border)",
-        borderRadius: "16px", padding: "30px", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+        borderRadius: "16px", padding: "30px", textAlign: "center", boxShadow: "0 24px 60px rgba(0,0,0,0.5)", outline: "none",
       }}>
         <div style={{ width: "62px", height: "62px", borderRadius: "50%", background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
           <CheckIcon size={30} color={color} />

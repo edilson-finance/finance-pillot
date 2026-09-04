@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { getSessionContext } from "@/lib/auth"
 import UsersClient, { type CompanyUser, type PendingInvite } from "./users-client"
 
+export const metadata = { title: "Usuários" }
+
+
 export default async function UsersPage() {
   const session = await getSessionContext()
 

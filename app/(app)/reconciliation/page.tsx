@@ -153,7 +153,7 @@ export default function ReconciliationPage() {
         onChange={(e) => handleFile(e.target.files?.[0])} />
 
       {error && (
-        <div style={{ background: "var(--danger-soft)", border: "1px solid var(--danger)40", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px", fontSize: "12px", color: "var(--danger)" }}>
+        <div style={{ background: "var(--danger-soft)", border: "1px solid var(--danger-border)", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px", fontSize: "12px", color: "var(--danger)" }}>
           {error}
         </div>
       )}
@@ -246,21 +246,21 @@ export default function ReconciliationPage() {
               {/* Ações */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 {st.status === "already" ? (
-                  <span style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success)40", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 700, textAlign: "center" }}>Já conciliado</span>
+                  <span style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success-border)", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 700, textAlign: "center" }}>Já conciliado</span>
                 ) : done ? (
-                  <span style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success)40", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 700, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                  <span style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success-border)", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 700, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
                     <CheckCircle2 size={12} /> Conciliado
                   </span>
                 ) : (
                   <>
                     {m.system ? (
                       <button disabled={st.busy} onClick={() => onConfirm(m)}
-                        style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success)40", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 600, cursor: st.busy ? "default" : "pointer", fontFamily: "inherit", opacity: st.busy ? 0.6 : 1 }}>
+                        style={{ padding: "6px 12px", background: "var(--success-soft)", border: "1px solid var(--success-border)", borderRadius: "6px", fontSize: "11px", color: "var(--success)", fontWeight: 600, cursor: st.busy ? "default" : "pointer", fontFamily: "inherit", opacity: st.busy ? 0.6 : 1 }}>
                         {st.busy ? "Salvando…" : "Confirmar"}
                       </button>
                     ) : (
                       <button disabled={st.busy} onClick={() => onCreate(m)}
-                        style={{ padding: "6px 12px", background: "var(--accent-soft)", border: "1px solid var(--accent)40", borderRadius: "6px", fontSize: "11px", color: "var(--accent)", fontWeight: 600, cursor: st.busy ? "default" : "pointer", fontFamily: "inherit", opacity: st.busy ? 0.6 : 1 }}>
+                        style={{ padding: "6px 12px", background: "var(--accent-soft)", border: "1px solid var(--accent-border)", borderRadius: "6px", fontSize: "11px", color: "var(--accent)", fontWeight: 600, cursor: st.busy ? "default" : "pointer", fontFamily: "inherit", opacity: st.busy ? 0.6 : 1 }}>
                         {st.busy ? "Criando…" : "Criar lançamento"}
                       </button>
                     )}

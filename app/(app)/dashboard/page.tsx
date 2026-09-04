@@ -9,6 +9,7 @@ import Link from "next/link"
 import { useDateRange } from "@/lib/date-context"
 import { daysBetween } from "@/lib/date-utils"
 import { useKpis, useRevenueSeries, useTopClients, useTopExpenses, useHealthDimensions, useCashflow } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { formatCurrency } from "@/lib/utils"
 
 const R = formatCurrency
@@ -109,12 +110,17 @@ function compactCurrency(value: number) {
 
 export default function DashboardPage() {
   const { range } = useDateRange()
-  const { kpis } = useKpis(range)
+  const { kpis, loading } = useKpis(range)
   const { series } = useRevenueSeries(range)
   const { rows: topClients } = useTopClients(range)
   const { rows: topExpenses } = useTopExpenses(range)
   const { rows: cashRows } = useCashflow(range)
   const { dims: healthDimensions } = useHealthDimensions()
+
+  // Enquanto os KPIs carregam, mostra um spinner em vez de piscar R$ 0 (antes a
+  // tela renderizava zerada e "saltava" para os valores reais).
+  if (loading) return <ScreenLoader />
+
   const days   = daysBetween(range.start, range.end)
   const healthScore = healthDimensions.length ? parseFloat((healthDimensions.reduce((s,d)=>s+d.nota,0)/healthDimensions.length).toFixed(1)) : 0
   const liquidoSeries = series.map(d => ({ ...d, liquido: d.receita - d.despesa }))
@@ -157,7 +163,7 @@ export default function DashboardPage() {
         <KpiCard label="Saldo Atual"          value={R(kpis.saldoAtual)}     sub="Todas as contas"                color="var(--accent)"  href="/cashflow" />
         <KpiCard label="Faturamento"          value={R(kpis.faturamento)}    sub={`+${kpis.faturamentoVar}% vs anterior`} trend="up" color="var(--success)" href="/bi" />
         <KpiCard label="Lucro Líquido"        value={R(kpis.lucroLiquido)}   sub={`Margem ${kpis.lucroMargin}%`} trend="down" color="var(--warning)" href="/dre" />
-        <KpiCard label="Margem Contribuição"  value={`${kpis.margemContribuicao}%`} sub="Acima dos 35% ideais" trend="up" color="var(--success)" href="/dre" />
+        <KpiCard label="Margem Contribuição"  value={`${kpis.margemContribuicao}%`} sub="Ideal: acima de 35%" color="var(--success)" href="/dre" />
       </div>
 
       {/* KPI Row 2 */}
@@ -345,31 +351,26 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px" }}>
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px" }}>
-            <div>
-              <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>Leitura Estratégica</div>
-              <div style={{ fontSize:"10.5px",color:"var(--text-muted)",marginTop:"1px" }}>O que os números indicam</div>
-            </div>
-            <Link href="/diagnostic" style={{ fontSize:"11px",color:"var(--accent)",textDecoration:"none" }}>Diagnóstico →</Link>
+        <div style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"18px",display:"flex",flexDirection:"column" }}>
+          <div style={{ marginBottom:"14px" }}>
+            <div style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>Leitura Estratégica</div>
+            <div style={{ fontSize:"10.5px",color:"var(--text-muted)",marginTop:"1px" }}>Análise gerada a partir dos seus dados</div>
           </div>
-          {[
-            { t:"Caixa vem de poucos motores", d:"Obras e medições respondem por 79,5% das entradas. O caixa cresce, mas a dependência de poucos contratos aumenta o risco.", c:"var(--warning)" },
-            { t:"Saída fixa precisa de previsibilidade", d:"Folha e equipe são a maior saída. O gestor deve cruzar folha futura com recebimentos confirmados antes do dia 24.", c:"var(--danger)" },
-            { t:"Melhor alavanca de decisão", d:"Separar entradas por categoria, produto, serviço e cliente mostra onde vender mais, onde renegociar e onde proteger margem.", c:"var(--accent)" },
-          ].map(item=>(
-            <div key={item.t} style={{ borderLeft:`3px solid ${item.c}`,background:`${item.c}12`,borderRadius:"8px",padding:"10px 12px",marginBottom:"8px" }}>
-              <div style={{ fontSize:"12px",fontWeight:800,color:"var(--text-primary)",marginBottom:"3px" }}>{item.t}</div>
-              <div style={{ fontSize:"11px",color:"var(--text-secondary)",lineHeight:1.5 }}>{item.d}</div>
+          <div style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",gap:"14px",padding:"16px 8px" }}>
+            <div style={{ fontSize:"12px",color:"var(--text-secondary)",lineHeight:1.55,maxWidth:"34ch" }}>
+              O CFO AI analisa seus lançamentos, DRE e fluxo de caixa e aponta riscos, gargalos e prioridades — com base nos números reais da sua empresa.
             </div>
-          ))}
+            <Link href="/diagnostic" style={{ fontSize:"12px",fontWeight:600,color:"#fff",background:"var(--accent)",padding:"9px 18px",borderRadius:"8px",textDecoration:"none" }}>
+              Abrir diagnóstico →
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* KPI extras */}
       <div className="kpi-grid" style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px" }}>
         <KpiCard label="Capital de Giro"     value={R(kpis.capitalGiro)}    sub="Disponível"         color="var(--accent)" />
-        <KpiCard label="Saldo Projetado 30d" value={R(kpis.saldoProjetado)} sub="+9,7% vs atual"     trend="up" color="var(--success)" href="/cashflow" />
+        <KpiCard label="Saldo Projetado 30d" value={R(kpis.saldoProjetado)} sub="Projeção 30 dias" color="var(--success)" href="/cashflow" />
         <KpiCard label="Ticket Médio"        value={R(kpis.ticketMedio)}    sub="Por lançamento" />
         <Link href="/health" style={{ textDecoration:"none" }}>
           <div style={{ background:"var(--bg-secondary)",border:"1px solid rgba(245,158,11,0.25)",borderRadius:"var(--radius)",padding:"16px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",height:"100%" }}>

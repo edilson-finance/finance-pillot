@@ -473,24 +473,9 @@ export default function SettingsClient({ company }: { company: CompanySettings |
                   </div>
                 ))}
               </div>
-              <button style={{ padding: "9px 20px", background: "var(--accent)", border: "none", borderRadius: "7px", fontSize: "12px", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: "24px" }}>
+              <a href="/forgot-password" style={{ display: "inline-block", padding: "9px 20px", background: "var(--accent)", border: "none", borderRadius: "7px", fontSize: "12px", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" }}>
                 Alterar senha
-              </button>
-              <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "12px" }}>Sessões ativas</div>
-                {[
-                  { device: "MacBook Pro — Chrome", ip: "189.40.xxx.xx", last: "Agora" },
-                  { device: "iPhone 15 — Safari", ip: "189.40.xxx.xx", last: "Ontem, 18:42" },
-                ].map(s => (
-                  <div key={s.device} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-                    <div>
-                      <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{s.device}</div>
-                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{s.ip} · {s.last}</div>
-                    </div>
-                    <button style={{ fontSize: "11px", color: "var(--danger)", background: "var(--danger-soft)", padding: "3px 10px", borderRadius: "6px", border: "none", cursor: "pointer", fontFamily: "inherit" }}>Encerrar</button>
-                  </div>
-                ))}
-              </div>
+              </a>
             </>
           )}
 

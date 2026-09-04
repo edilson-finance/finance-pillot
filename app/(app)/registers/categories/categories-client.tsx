@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Pencil, Trash2, ChevronRight, X, Settings, Sparkles } from "lucide-react"
 import type { CategoryNode, CategoryTree, CategoryAba } from "@/lib/db/categories"
 import { createCategory, updateCategory, deleteCategory, seedDefaults } from "./actions"
@@ -66,8 +67,8 @@ const inp: React.CSSProperties = {
   color: "var(--text-primary)", outline: "none", fontFamily: "inherit",
 }
 
-function Label({ children }: { children: string }) {
-  return <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)", marginBottom: "5px", textTransform: "uppercase", letterSpacing: "0.4px" }}>{children}</label>
 }
 
 /* ── Helpers de árvore ── */
@@ -91,6 +92,7 @@ type FormState =
 
 export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [activeAba, setActiveAba] = useState<CategoryAba>("receita")
   const [q, setQ] = useState("")
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -138,12 +140,12 @@ export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
     })
   }
 
-  function handleDelete(node: CategoryNode) {
-    if (!window.confirm(`Excluir "${node.name}"?`)) return
+  async function handleDelete(node: CategoryNode) {
+    if (!(await confirm(`Excluir "${node.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     startTransition(async () => {
       const res = await deleteCategory(node.id)
       if (res.ok) router.refresh()
-      else window.alert(res.error)
+      else void alert(res.error ?? "Não foi possível excluir.", { title: "Erro" })
     })
   }
 
@@ -229,13 +231,13 @@ export default function CategoriesClient({ tree }: { tree: CategoryTree }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: form.mode === "create-child" ? "1fr" : "1fr 1fr", gap: "14px" }}>
             <div>
-              <Label>Nome *</Label>
-              <input name="name" type="text" required autoFocus defaultValue={form.mode === "edit" ? form.node.name : ""} placeholder="Ex: Materiais de construção" style={inp} />
+              <Label htmlFor="cat_name">Nome *</Label>
+              <input name="name" id="cat_name" type="text" required autoFocus defaultValue={form.mode === "edit" ? form.node.name : ""} placeholder="Ex: Materiais de construção" style={inp} />
             </div>
             {form.mode !== "create-child" && (
               <div>
-                <Label>Grupo na DRE *</Label>
-                <select name="grupo" required defaultValue={form.mode === "edit" ? form.node.grupo ?? "" : ""} style={inp}>
+                <Label htmlFor="cat_grupo">Grupo na DRE *</Label>
+                <select name="grupo" id="cat_grupo" required defaultValue={form.mode === "edit" ? form.node.grupo ?? "" : ""} style={inp}>
                   <option value="" disabled>Selecione...</option>
                   {GRUPOS_POR_ABA[activeAba].map((g) => (
                     <option key={g.grupo} value={g.grupo}>{g.label}</option>

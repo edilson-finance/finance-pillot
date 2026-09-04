@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, Eye, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Customer } from "@/lib/db/customers"
 import { createCustomer, updateCustomer, deleteCustomer } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const stCfg: Record<string, { label: string; c: string; bg: string }> = {
   ativo:       { label:"Ativo",       c:"var(--success)", bg:"var(--success-soft)" },
@@ -16,12 +18,13 @@ const stCfg: Record<string, { label: string; c: string; bg: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function CustomersClient({ customers }: { customers: Customer[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
@@ -69,10 +72,10 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
   }
 
   async function handleDelete(c: Customer) {
-    if (!window.confirm(`Excluir o cliente "${c.name}"?`)) return
+    if (!(await confirm(`Excluir o cliente "${c.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteCustomer(c.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (
@@ -107,17 +110,17 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Cliente" : "Novo Cliente"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Razão Social / Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Construtora Exemplo Ltda" style={inp}/></div>
-            <div><Label>CPF / CNPJ</Label><input name="document" id="document" type="text" defaultValue={editing?.document ?? ""} placeholder="00.000.000/0001-00" style={inp}/></div>
-            <div><Label>E-mail</Label><input name="email" id="email" type="email" defaultValue={editing?.email ?? ""} placeholder="financeiro@empresa.com.br" style={inp}/></div>
-            <div><Label>Telefone</Label><input name="phone" id="phone" type="text" defaultValue={editing?.phone ?? ""} placeholder="(11) 99999-9999" style={inp}/></div>
-            <div><Label>Status</Label>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Razão Social / Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Construtora Exemplo Ltda" style={inp}/></div>
+            <div><Label htmlFor="document">CPF / CNPJ</Label><input name="document" id="document" type="text" defaultValue={editing?.document ?? ""} placeholder="00.000.000/0001-00" style={inp}/></div>
+            <div><Label htmlFor="email">E-mail</Label><input name="email" id="email" type="email" defaultValue={editing?.email ?? ""} placeholder="financeiro@empresa.com.br" style={inp}/></div>
+            <div><Label htmlFor="phone">Telefone</Label><input name="phone" id="phone" type="text" defaultValue={editing?.phone ?? ""} placeholder="(11) 99999-9999" style={inp}/></div>
+            <div><Label htmlFor="status">Status</Label>
               <select name="status" id="status" defaultValue={editing?.status ?? "ativo"} style={inp}>
                 <option value="ativo">Ativo</option>
                 <option value="estrategico">Estratégico</option>
@@ -180,6 +183,17 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
                 </tr>
               )
             })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={9} style={{ padding: 0 }}>
+                <EmptyState
+                  title={q ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+                  description={q ? "Tente ajustar a busca." : "Cadastre o primeiro cliente para vincular às suas cobranças."}
+                  action={q ? undefined : (
+                    <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo cliente</button>
+                  )}
+                />
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>

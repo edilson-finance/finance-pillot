@@ -6,6 +6,9 @@ import { listCostCenters } from "@/lib/db/cost-centers"
 import { listProducts } from "@/lib/db/products"
 import PayablesClient from "./payables-client"
 
+export const metadata = { title: "Contas a Pagar" }
+
+
 export default async function PayablesPage() {
   const [payables, suppliers, categories, accounts, costCenters, products] = await Promise.all([
     listPayables(),

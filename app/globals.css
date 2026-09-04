@@ -24,7 +24,7 @@
   /* Texto */
   --text-primary:   #EEF2FF;
   --text-secondary: #8FA3C0;
-  --text-muted:     #3D5478;
+  --text-muted:     #7386AD;
 
   /* Índigo — ação principal (tecnologia + confiança) */
   --accent:        #4F46E5;
@@ -32,25 +32,30 @@
   --accent-light:  #6366F1;
   --accent-soft:   rgba(79, 70, 229, 0.13);
   --accent-medium: rgba(79, 70, 229, 0.22);
+  --accent-border: rgba(79, 70, 229, 0.25);
 
   /* Esmeralda — crescimento / positivo */
   --success:       #10B981;
   --success-hover: #059669;
   --success-soft:  rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.25);
 
   /* Rosa — risco / negativo */
   --danger:        #F43F5E;
   --danger-hover:  #E11D48;
   --danger-soft:   rgba(244, 63, 94, 0.12);
+  --danger-border: rgba(244, 63, 94, 0.25);
 
   /* Âmbar — atenção */
   --warning:       #F59E0B;
   --warning-hover: #D97706;
   --warning-soft:  rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.25);
 
   /* Violeta — diagnóstico / BI */
   --purple:        #8B5CF6;
   --purple-soft:   rgba(139, 92, 246, 0.12);
+  --purple-border: rgba(139, 92, 246, 0.25);
 
   /* Ciano — info */
   --info:          #06B6D4;
@@ -77,11 +82,12 @@ html.light {
 
   --text-primary:   #0F172A;
   --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  --text-muted:     #64748B;
 
   --accent-soft:   rgba(79, 70, 229, 0.08);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow:    0 4px 16px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
 }
 
 /* ── Reset ── */
@@ -91,7 +97,7 @@ html, body { height: 100%; margin: 0; padding: 0; }
 body {
   background:  var(--bg-primary);
   color:       var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size:   14px;
   line-height: 1.5;
   -webkit-font-smoothing:  antialiased;
@@ -115,6 +121,76 @@ input, select, textarea, button {
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.6);
   cursor: pointer;
+}
+
+/* ── Foco de teclado visível ──
+   As telas usam `outline: none` inline em inputs/botões (~63 ocorrências), o que
+   apaga o indicador de foco para quem navega por teclado (WCAG 2.4.7). O
+   `!important` é necessário porque um estilo inline só é vencido por `!important`
+   numa folha de estilo. `:focus-visible` mostra o anel só na navegação por
+   teclado, não no clique de mouse. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role="button"]:focus-visible,
+[role="checkbox"]:focus-visible {
+  outline: 2px solid var(--border-focus) !important;
+  outline-offset: 2px;
+}
+
+/* ── Skip-link (a11y — WCAG 2.4.1) ──
+   Link "pular para o conteúdo" escondido até receber foco por teclado, para o
+   usuário não precisar tabular por toda a sidebar a cada página. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 9999;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 8px;
+}
+
+/* ── Alvos de toque (a11y — WCAG 2.5.5) ──
+   Botões de ícone (topbar 32px, ações de tabela 26–28px) são pequenos demais para
+   o dedo. No touch, expandimos a ÁREA CLICÁVEL com um pseudo-elemento centrado de
+   44px, sem alterar o tamanho visual do botão nem quebrar o layout das tabelas. */
+@media (pointer: coarse) {
+  main button, header button, aside button {
+    position: relative;
+  }
+  main button::after, header button::after, aside button::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* Conteúdo só para leitor de tela (visualmente escondido, mas anunciado). */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ─────────────────────────────────────────

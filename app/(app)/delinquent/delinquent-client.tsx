@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Check, Search, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import type { Receivable } from "@/lib/db/receivables"
@@ -28,6 +29,7 @@ function DiasTag({ dias }: { dias: number }) {
 
 export default function DelinquentClient({ items }: { items: Receivable[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [sortBy, setSortBy] = useState<"dias" | "valor">("dias")
   const [busy, setBusy] = useState<string | null>(null)
@@ -37,7 +39,7 @@ export default function DelinquentClient({ items }: { items: Receivable[] }) {
     const res = await markReceived(id)
     setBusy(null)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   let data = items.map(i => ({ ...i, dias: daysOverdue(i.due_date) }))

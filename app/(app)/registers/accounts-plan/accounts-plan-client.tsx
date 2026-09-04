@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { ChevronLeft, Plus, Edit2, X, Search, Info, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { AccountPlan } from "@/lib/db/accounts-plan"
 import { createAccountPlan, updateAccountPlan, deleteAccountPlan } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const KIND_LABEL: Record<string, { l: string; c: string }> = {
   receita:  { l: "Receita",  c: "var(--success)" },
@@ -16,12 +18,13 @@ const KIND_LABEL: Record<string, { l: string; c: string }> = {
 
 const inp: React.CSSProperties = { width:"100%",padding:"9px 12px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<AccountPlan | null>(null)
@@ -74,10 +77,10 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
   }
 
   async function handleDelete(c: AccountPlan) {
-    if (!window.confirm(`Excluir a conta "${c.code} — ${c.name}"?`)) return
+    if (!(await confirm(`Excluir a conta "${c.code} — ${c.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteAccountPlan(c.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (
@@ -125,22 +128,22 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"14px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Conta" : "Nova Conta"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
             <div>
-              <Label>Código *</Label>
+              <Label htmlFor="code">Código *</Label>
               <input name="code" id="code" type="text" required defaultValue={editing?.code ?? ""} placeholder="Ex: 5.2.11" style={inp}/>
             </div>
             <div style={{ gridColumn:"span 2" }}>
-              <Label>Nome da Conta *</Label>
+              <Label htmlFor="name">Nome da Conta *</Label>
               <input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Despesas com Combustível" style={inp}/>
             </div>
             <div>
-              <Label>Tipo</Label>
+              <Label htmlFor="kind">Tipo</Label>
               <select name="kind" id="kind" defaultValue={editing?.kind ?? ""} style={inp}>
                 <option value="">(nenhum)</option>
                 <option value="receita">Receita</option>
@@ -150,7 +153,7 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
               </select>
             </div>
             <div style={{ gridColumn:"span 2" }}>
-              <Label>Conta Pai</Label>
+              <Label htmlFor="parent_id">Conta Pai</Label>
               <select name="parent_id" id="parent_id" defaultValue={editing?.parent_id ?? ""} style={inp}>
                 <option value="">(nenhuma)</option>
                 {items.filter(c => c.id !== editing?.id).map(c=>(
@@ -212,6 +215,17 @@ export default function AccountsPlanClient({ items }: { items: AccountPlan[] }) 
                 </tr>
               )
             })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} style={{ padding: 0 }}>
+                <EmptyState
+                  title={q ? "Nenhuma conta encontrada" : "Nenhuma conta no plano"}
+                  description={q ? "Tente ajustar a busca." : "Cadastre a estrutura do plano de contas (DRE/NBC)."}
+                  action={q ? undefined : (
+                    <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Nova conta</button>
+                  )}
+                />
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>

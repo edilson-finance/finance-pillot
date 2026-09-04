@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronRight, ChevronLeft, Alert
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import { useCashflow, useReceivables, usePayables, useRevenueSeries, type OpenItem } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { exportCsv } from "@/lib/export"
 import Link from "next/link"
 
@@ -789,7 +790,7 @@ function ProjecaoForm() {
 export default function CashflowPage() {
   const [tab, setTab] = useState(0)
   const { range } = useDateRange()
-  const { rows: cfRows } = useCashflow(range)
+  const { rows: cfRows, loading } = useCashflow(range)
   const { rows: receivables } = useReceivables()
   const { rows: payables } = usePayables()
   const { series: revSeries } = useRevenueSeries(range)
@@ -820,6 +821,10 @@ export default function CashflowPage() {
   const aReceberTotal = receivables.reduce((s, r) => s + r.valor, 0)
   const aPagarTotal   = payables.reduce((s, p) => s + p.valor, 0)
   const weeklyProj = useMemo(() => buildWeeklyProjection(saldoFinal, flow), [saldoFinal, flow])
+
+  // Gate DEPOIS de todos os hooks (inclusive os useMemo) para não quebrar a ordem
+  // de hooks do React. Evita piscar zeros enquanto o fluxo carrega.
+  if (loading) return <ScreenLoader />
 
   return (
     <div style={{ padding:"22px" }}>

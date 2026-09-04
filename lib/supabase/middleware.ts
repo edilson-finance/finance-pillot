@@ -22,11 +22,22 @@ export async function updateSession(request: NextRequest) {
   )
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/signup")
-  if (!user && !isAuthRoute) {
+  // Rotas acessíveis sem sessão: login, cadastro e todo o fluxo de recuperação de
+  // senha (pedir reset, callback do link do e-mail que troca o código por sessão,
+  // e a página de definir nova senha).
+  const isPublicRoute =
+    path.startsWith("/login") ||
+    path.startsWith("/signup") ||
+    path.startsWith("/forgot-password") ||
+    path.startsWith("/reset-password") ||
+    path.startsWith("/auth/")
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
-  if (user && isAuthRoute) {
+  // Usuário já logado não deve ver login/cadastro — mas PODE estar num fluxo de
+  // recuperação (sessão de recovery), então esses não entram aqui.
+  const isLoginRoute = path.startsWith("/login") || path.startsWith("/signup")
+  if (user && isLoginRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 

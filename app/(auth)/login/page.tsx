@@ -28,7 +28,7 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      minHeight: "100vh",
+      minHeight: "100dvh",
       background: "var(--bg-primary)",
       display: "flex",
       alignItems: "center",
@@ -142,7 +142,7 @@ export default function LoginPage() {
                 </button>
               </div>
               <div style={{ textAlign: "right", marginTop: "6px" }}>
-                <Link href="#" style={{ fontSize: "11px", color: "var(--accent)", textDecoration: "none" }}>
+                <Link href="/forgot-password" style={{ fontSize: "11px", color: "var(--accent)", textDecoration: "none" }}>
                   Esqueceu a senha?
                 </Link>
               </div>

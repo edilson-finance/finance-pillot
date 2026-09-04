@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Check, Edit2, X, AlertCircle, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { Receivable } from "@/lib/db/receivables"
@@ -61,6 +62,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   partnerReceiversEnabled: boolean
 }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   // Mobile: lista vira cards (ver bloco isMobile abaixo) em vez da tabela cortada.
   const { isMobile } = useMobileNav()
   const [filter, setFilter] = useState("todos")
@@ -107,16 +109,16 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   }
 
   async function handleDelete(r: Receivable) {
-    if (!window.confirm(`Excluir a cobrança "${r.description ?? r.id}"?`)) return
+    if (!(await confirm(`Excluir a cobrança "${r.description ?? r.id}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteReceivable(r.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   async function handleReceive(r: Receivable) {
     const res = await markReceived(r.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (
@@ -172,7 +174,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
 
       {/* Form simples — apenas para edição de cobrança existente */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Cobrança" : "Nova Cobrança"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>

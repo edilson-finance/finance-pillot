@@ -173,7 +173,7 @@ export default function TimelinePage() {
             <div style={{
               position: "absolute", left: "10px", top: "4px",
               width: "28px", height: "28px", borderRadius: "50%",
-              background: "var(--accent)20", border: `2px dashed var(--accent)`,
+              background: "var(--accent-soft)", border: `2px dashed var(--accent)`,
               display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1,
             }}>
               <ChevronRight size={12} style={{ color: "var(--accent)" }} />

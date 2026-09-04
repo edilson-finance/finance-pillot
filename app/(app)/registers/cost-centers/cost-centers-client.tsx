@@ -2,19 +2,22 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/lib/dialog"
 import { Plus, Search, Edit2, ChevronLeft, X, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { CostCenter } from "@/lib/db/cost-centers"
 import { createCostCenter, updateCostCenter, deleteCostCenter } from "./actions"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const inp: React.CSSProperties = { width:"100%",padding:"8px 11px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12.5px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }
 
-function Label({ children }: { children:string }) {
-  return <label style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
+function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
+  return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
 export default function CostCentersClient({ costCenters }: { costCenters: CostCenter[] }) {
   const router = useRouter()
+  const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CostCenter | null>(null)
@@ -62,10 +65,10 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
   }
 
   async function handleDelete(c: CostCenter) {
-    if (!window.confirm(`Excluir o centro de custo "${c.name}"?`)) return
+    if (!(await confirm(`Excluir o centro de custo "${c.name}"?`, { danger: true, confirmText: "Excluir" }))) return
     const res = await deleteCostCenter(c.id)
     if (res.error === null) router.refresh()
-    else window.alert(res.error)
+    else void alert(res.error, { title: "Erro" })
   }
 
   return (
@@ -100,14 +103,14 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent)40",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
+        <form onSubmit={handleSubmit} style={{ background:"var(--bg-secondary)",border:"1px solid var(--accent-border)",borderRadius:"var(--radius)",padding:"20px",marginBottom:"16px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",marginBottom:"16px" }}>
             <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{editing ? "Editar Centro de Custo" : "Novo Centro de Custo"}</span>
             <button type="button" onClick={closeForm} style={{ border:"none",background:"none",cursor:"pointer",color:"var(--text-muted)" }}><X size={16}/></button>
           </div>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
-            <div style={{ gridColumn:"span 2" }}><Label>Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Obra 10 — Incorporadora Sul" style={inp}/></div>
-            <div><Label>Código</Label><input name="code" id="code" type="text" defaultValue={editing?.code ?? ""} placeholder="Ex: CC-010" style={inp}/></div>
+            <div style={{ gridColumn:"span 2" }}><Label htmlFor="name">Nome *</Label><input name="name" id="name" type="text" required defaultValue={editing?.name ?? ""} placeholder="Ex: Obra 10 — Incorporadora Sul" style={inp}/></div>
+            <div><Label htmlFor="code">Código</Label><input name="code" id="code" type="text" defaultValue={editing?.code ?? ""} placeholder="Ex: CC-010" style={inp}/></div>
           </div>
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>
@@ -129,7 +132,7 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
           <div key={c.id} style={{ background:"var(--bg-secondary)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"16px 18px",display:"grid",gridTemplateColumns:"1fr 140px 140px 200px 90px 80px",gap:"16px",alignItems:"center" }}>
             <div>
               <div style={{ display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px" }}>
-                {c.code && <span style={{ fontSize:"10px",fontWeight:700,color:"var(--accent)",background:"var(--accent)20",padding:"2px 7px",borderRadius:"20px" }}>{c.code}</span>}
+                {c.code && <span style={{ fontSize:"10px",fontWeight:700,color:"var(--accent)",background:"var(--accent-soft)",padding:"2px 7px",borderRadius:"20px" }}>{c.code}</span>}
                 <span style={{ fontSize:"13px",fontWeight:700,color:"var(--text-primary)" }}>{c.name}</span>
               </div>
               <div style={{ fontSize:"11px",color:"var(--text-muted)" }}>—</div>
@@ -162,6 +165,15 @@ export default function CostCentersClient({ costCenters }: { costCenters: CostCe
             </div>
           </div>
         ))}
+        {filtered.length === 0 && (
+          <EmptyState
+            title={q ? "Nenhum centro encontrado" : "Nenhum centro de custo cadastrado"}
+            description={q ? "Tente ajustar a busca." : "Crie centros de custo (obras, projetos, filiais) para ratear seus lançamentos."}
+            action={q ? undefined : (
+              <button type="button" onClick={openNew} style={{ display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 16px", background:"var(--accent)", color:"#fff", border:"none", borderRadius:"var(--radius-sm)", fontSize:"12px", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}><Plus size={13}/> Novo centro</button>
+            )}
+          />
+        )}
       </div>
     </div>
   )

@@ -1,0 +1,24 @@
+-- 0033_fix_profiles_privilege_escalation.sql
+--
+-- [CRÍTICO] Fecha o escalonamento de privilégio: qualquer usuário `authenticated`
+-- podia reescrever a própria linha em `public.profiles` — a policy `profiles_update`
+-- tem WITH CHECK nulo (herda o USING, que só exige `id = auth.uid()`) e `authenticated`
+-- tinha grant de UPDATE nas colunas `role`/`company_id`. Com isso, um membro comum
+-- fazia `PATCH /rest/v1/profiles?id=eq.<seu-uid>` `{"role":"super_admin"}` e ganhava
+-- acesso a TODOS os tenants (a RLS de todas as tabelas confia em `auth_role()` /
+-- `auth_company_id()`, que leem justamente `profiles.role`/`profiles.company_id`).
+-- Presente desde 0005_core_rls.sql.
+--
+-- Correção: o app NUNCA escreve em `profiles` diretamente com o client do usuário —
+-- todas as mutações passam por RPCs SECURITY DEFINER (set_user_name, set_user_role,
+-- set_member_permissions, create_company_and_profile, fn_switch_company), que rodam
+-- como dono da tabela e NÃO são afetadas por estes grants. Portanto, revogar a
+-- escrita direta de anon/authenticated fecha o vetor sem quebrar nenhum fluxo
+-- legítimo. SELECT é mantido (a policy `profiles_select` continua escopando por
+-- empresa/próprio id). `service_role` (admin client) mantém acesso total.
+--
+-- NB: NÃO usar um trigger que bloqueie mudança de role/company_id no contexto de
+-- request — ele quebraria set_user_role/fn_switch_company, que legitimamente alteram
+-- esses campos nesse mesmo contexto.
+
+revoke insert, update, delete, truncate on public.profiles from anon, authenticated;

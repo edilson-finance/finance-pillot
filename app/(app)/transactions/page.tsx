@@ -9,6 +9,9 @@ import { getCompanySettings } from "@/lib/db/company"
 import { listRecentEntries } from "@/lib/db/lancamentos"
 import TransactionsClient from "./transactions-client"
 
+export const metadata = { title: "Lançamentos" }
+
+
 export default async function TransactionsPage() {
   const [categories, accounts, costCenters, customers, suppliers, products, partners, company, recent] =
     await Promise.all([

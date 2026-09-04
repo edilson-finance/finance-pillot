@@ -8,6 +8,7 @@ import {
 } from "recharts"
 import { Download, TrendingUp, TrendingDown, Info, Plus, X, Check } from "lucide-react"
 import { useTopClients, useTopExpenses } from "@/lib/analytics-client"
+import { ScreenLoader } from "@/components/ui/screen-loader"
 import { formatCurrency } from "@/lib/utils"
 import { useDateRange } from "@/lib/date-context"
 import {
@@ -335,7 +336,7 @@ export default function BiPage() {
 
   /* ── Dados filtrados pelo período selecionado ── */
   const { series } = useRevenueSeries(range)
-  const { kpis }   = useKpis(range)
+  const { kpis, loading }   = useKpis(range)
   const { rows: topClients }  = useTopClients(range)
   const { rows: topExpenses } = useTopExpenses(range)
   const { data: periodCmp }   = usePeriodComparison(range)
@@ -343,6 +344,9 @@ export default function BiPage() {
   const { data: projection }  = useCashflowProjection(13)
   const [drillDim, setDrillDim] = useState<"categoria"|"centro_custo"|"cliente"|"fornecedor">("categoria")
   const { rows: drillRows }   = useDrilldown(range, drillDim)
+
+  if (loading) return <ScreenLoader />
+
   const days     = daysBetween(range.start, range.end)
 
   const totalReceita  = series.reduce((s,d) => s + d.receita, 0)
@@ -445,9 +449,18 @@ export default function BiPage() {
                 <span style={{ fontSize:"11px",fontWeight:700,color:"var(--text-primary)" }}>{c.percent.toFixed(1)}%</span>
               </div>
             ))}
-            <div style={{ marginTop:"8px", padding:"6px 8px", background:"var(--danger-soft)", borderRadius:"6px" }}>
-              <span style={{ fontSize:"10px", color:"var(--danger)", fontWeight:600 }}>Top 3 clientes = 93% — risco alto</span>
-            </div>
+            {(() => {
+              const top3 = topClients.slice(0, 3).reduce((s, c) => s + c.percent, 0)
+              if (top3 <= 0) return null
+              const alta = top3 > 60
+              return (
+                <div style={{ marginTop:"8px", padding:"6px 8px", background: alta ? "var(--danger-soft)" : "var(--bg-tertiary)", borderRadius:"6px" }}>
+                  <span style={{ fontSize:"10px", color: alta ? "var(--danger)" : "var(--text-secondary)", fontWeight:600 }}>
+                    Top 3 clientes = {top3.toFixed(0)}%{alta ? " — concentração alta" : ""}
+                  </span>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </>}

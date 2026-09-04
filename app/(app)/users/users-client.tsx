@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useDialogA11y } from "@/lib/use-dialog-a11y"
 import { Plus, X, Shield, Check, Copy, Trash2, Settings2, Mail, User, ChevronDown, ChevronUp, Pencil, Ban, RotateCcw } from "lucide-react"
 import { MEMBER_MODULES } from "@/lib/modules"
 import { createInvite, revokeInvite, updateUserRole, setMemberPermissions, removeUser, updateUserName, setUserActive } from "./actions"
@@ -389,9 +390,10 @@ function EditNameModal({ user, onClose, onSave, saving }: {
 }) {
   const [name, setName] = useState(user.name)
   const trimmed = name.trim()
+  const dialogRef = useDialogA11y<HTMLDivElement>(onClose)
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "24px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "22px", width: "100%", maxWidth: "440px" }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Editar usuário" tabIndex={-1} onClick={e => e.stopPropagation()} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "22px", width: "100%", maxWidth: "440px", outline: "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
           <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Editar usuário</span>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-muted)" }}><X size={16} /></button>
@@ -490,9 +492,10 @@ function PermissionEditor({ user, onClose, onSave, saving }: {
   const [sel, setSel] = useState<Record<string, boolean>>(
     Object.fromEntries(user.modules.map(m => [m, true])),
   )
+  const dialogRef = useDialogA11y<HTMLDivElement>(onClose)
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "24px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "22px", width: "100%", maxWidth: "520px" }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Permissões do usuário" tabIndex={-1} onClick={e => e.stopPropagation()} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "22px", width: "100%", maxWidth: "520px", outline: "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
           <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)" }}>Permissões de {user.name || user.email}</span>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-muted)" }}><X size={16} /></button>

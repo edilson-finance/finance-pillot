@@ -5,7 +5,12 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "wiqfy — Gestão Financeira Inteligente",
+  // `template` compõe o título das páginas que definem o seu (ex.: "Contas a
+  // Pagar · wiqfy"); `default` vale para as que não definem.
+  title: {
+    default: "wiqfy — Gestão Financeira Inteligente",
+    template: "%s · wiqfy",
+  },
   description: "Copiloto financeiro para PMEs brasileiras",
 }
 
@@ -17,11 +22,11 @@ const themeScript = `(function(){try{var t=localStorage.getItem("fp-theme");if(t
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body style={{ margin: 0, padding: 0, height: "100%", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+      <body suppressHydrationWarning style={{ margin: 0, padding: 0, height: "100%", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
         {children}
       </body>
     </html>
