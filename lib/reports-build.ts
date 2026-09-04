@@ -7,7 +7,7 @@ const R = formatCurrency
 export type ReportId =
   | "dre" | "cashflow" | "payables" | "receivables" | "inadimplencia"
   | "byCategory" | "byExpense" | "byCostCenter" | "byClient" | "bySupplier"
-  | "conciliacao" | "balancete"
+  | "conciliacao" | "balancete" | "repasses"
 
 export type GroupBy = "detalhado" | "dia" | "semana" | "mes" | "trimestre" | "ano"
 
@@ -53,6 +53,7 @@ export const REPORT_METAS: ReportMeta[] = [
   { id: "bySupplier",   label: "Por Fornecedor",         desc: "Pagamentos e concentração de fornecedores",       icon: "Truck",         filters: { categoria: true, centroCusto: true, status: "payable" } },
   { id: "conciliacao",  label: "Conciliação Bancária",   desc: "Movimento por conta no período",                  icon: "RefreshCw",     filters: { categoria: true } },
   { id: "balancete",    label: "Balancete Financeiro",   desc: "Saldo inicial, movimento e saldo final por conta", icon: "FileText",     filters: {} },
+  { id: "repasses",     label: "Repasses por Parceiro",  desc: "Quanto é repasse e quanto é comissão, por recebedor", icon: "Users",     filters: { categoria: true, centroCusto: true, status: "receivable" } },
 ]
 
 export const STATUS_OPTIONS: Record<"receivable" | "payable", { value: string; label: string }[]> = {
@@ -420,5 +421,58 @@ export function buildReport(id: ReportId, data: ReportsData, f: Filters): BuiltR
     case "bySupplier": return buildByParty(data, f, "pay")
     case "conciliacao": return buildConciliacao(data, f)
     case "balancete": return buildBalancete(data, f)
+    case "repasses": return buildRepasses(data, f)
+  }
+}
+
+/* ── Repasses por Parceiro ──
+   Para quem administra valores de terceiros (ex.: imobiliária): quanto foi
+   cobrado no período por recebedor, quanto é comissão da empresa e quanto tem
+   de ser repassado. A chave PIX vem junto para facilitar o pagamento. */
+type RepasseRow = {
+  parceiro: string; pix: string; titulos: number
+  bruto: number; comissao: number; repasse: number
+  recebido: number; aReceber: number
+}
+
+function buildRepasses(data: ReportsData, f: Filters): BuiltReport {
+  const rows = data.receivables
+    .filter((r) => r.partnerId)
+    .filter((r) => (f.categoria === "todos" ? true : r.categoryId === f.categoria))
+    .filter((r) => (f.centroCusto === "todos" ? true : r.costCenterId === f.centroCusto))
+    .filter((r) => (f.status === "todos" ? true : r.status === f.status))
+
+  const m = new Map<string, RepasseRow>()
+  for (const r of rows) {
+    const key = r.partnerId as string
+    const cur = m.get(key) ?? {
+      parceiro: r.partnerName || "—", pix: r.partnerPix || "—",
+      titulos: 0, bruto: 0, comissao: 0, repasse: 0, recebido: 0, aReceber: 0,
+    }
+    const comissao = r.commission
+    const repasse = Math.max(0, r.amount - comissao)
+    cur.titulos += 1
+    cur.bruto += r.amount
+    cur.comissao += comissao
+    cur.repasse += repasse
+    if (r.status === "recebido") cur.recebido += repasse
+    else cur.aReceber += repasse
+    m.set(key, cur)
+  }
+
+  const out = [...m.values()].sort((a, b) => b.repasse - a.repasse)
+
+  return {
+    columns: [
+      { header: "Recebedor",       value: (r: RepasseRow) => r.parceiro },
+      { header: "Chave PIX",       value: (r: RepasseRow) => r.pix },
+      { header: "Títulos",         value: (r: RepasseRow) => String(r.titulos), align: "right" },
+      { header: "Valor bruto",     value: (r: RepasseRow) => R(r.bruto),    align: "right" },
+      { header: "Comissão",        value: (r: RepasseRow) => R(r.comissao), align: "right" },
+      { header: "Repasse total",   value: (r: RepasseRow) => R(r.repasse),  align: "right" },
+      { header: "Já recebido",     value: (r: RepasseRow) => R(r.recebido), align: "right" },
+      { header: "A receber",       value: (r: RepasseRow) => R(r.aReceber), align: "right" },
+    ],
+    rows: out,
   }
 }

@@ -11,10 +11,18 @@ import type { RecentEntry } from "@/lib/db/lancamentos"
 type Opt = { id: string; name: string }
 type Cat = Opt & { kind: string }
 type Acc = Opt & { balance: number }
-type Prod = Opt & { price: number; unit: string | null }
+type Prod = Opt & {
+  price: number; unit: string | null
+  /* Locação: presentes quando o item é um imóvel administrado (ver 0037). */
+  partner_id?: string | null
+  tenant_id?: string | null
+  commission_percent?: number
+  rent_amount?: number
+}
 
 const today = () => new Date().toISOString().slice(0, 10)
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+const round2 = (n: number) => Math.round(n * 100) / 100
 
 // ── estilos base ─────────────────────────────────────────────────────────────
 const inp: React.CSSProperties = {
@@ -671,23 +679,7 @@ export function FormReceita({ o, onSaved, onNew, onCancel }: { o: Options; onSav
       {o.partnerReceiversEnabled && (
         <>
           <Section>Recebedor do Valor (parceiro)</Section>
-          <div style={{ background: "var(--purple-soft)", border: "1px solid rgba(139,92,246,0.25)", borderRadius: "10px", padding: "16px", marginBottom: "4px" }}>
-            <div style={grid2}>
-              <Field label={<>Quem recebe o valor bruto<InfoTip text="Dono do valor desta cobrança. Escolhendo um parceiro (ex.: dono do lote), o valor bruto recebido é repasse a ele — não conta como receita nem faturamento da empresa. Deixe 'A própria empresa' para uma receita normal." /></>}>
-                <select name="partner_id" style={inp}>
-                  <option value="">A própria empresa (padrão)</option>
-                  {(o.partners ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </Field>
-              <Field label={<>Juros / Multa (fica com a empresa)<InfoTip text="Juros e multa cobrados do cliente nesta parcela. Essa parte é receita da empresa e NÃO entra no repasse ao parceiro. Informe em R$ ou em % — no modo %, o percentual é aplicado sobre o Valor Total e convertido em R$ ao salvar." /></>}><InterestField color={C} /></Field>
-            </div>
-            <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginTop: "14px", padding: "11px 13px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "8px" }}>
-              <Info size={14} style={{ color: "var(--purple)", flexShrink: 0, marginTop: "2px" }} />
-              <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: 1.65 }}>
-                Com um parceiro selecionado, o <strong>valor bruto</strong> é repasse ao recebedor e não conta como receita da empresa — somente os <strong>juros/multa</strong> contam. O repasse aparece no relatório <strong>Recebimento Parceiro</strong>.
-              </span>
-            </div>
-          </div>
+          <PartnerBlock o={o} color={C} />
         </>
       )}
 
@@ -862,6 +854,82 @@ function FormTransferencia({ o, onSaved, onNew }: { o: Options; onSaved: () => v
 }
 
 // ── tipos das opções ─────────────────────────────────────────────────────────
+/* Recebedor parceiro / locação.
+   Escolher um imóvel administrado preenche sozinho o proprietário e a comissão —
+   o usuário não precisa lembrar de quem é o imóvel nem qual o percentual. */
+function PartnerBlock({ o, color }: { o: Options; color: string }) {
+  const imoveis = (o.products ?? []).filter((p) => p.partner_id)
+  const [imovelId, setImovelId] = useState("")
+  const [partnerId, setPartnerId] = useState("")
+  const [pct, setPct] = useState("")
+
+  function escolherImovel(id: string) {
+    setImovelId(id)
+    const im = imoveis.find((p) => p.id === id)
+    if (!im) return
+    setPartnerId(im.partner_id ?? "")
+    setPct(String(im.commission_percent ?? 0))
+  }
+
+  const imovel = imoveis.find((p) => p.id === imovelId)
+  const base = Number(imovel?.rent_amount ?? 0)
+  const pctNum = Math.min(100, Math.max(0, Number(pct) || 0))
+  const comissao = round2((base * pctNum) / 100)
+  const repasse = round2(base - comissao)
+
+  return (
+    <div style={{ background: "var(--purple-soft)", border: "1px solid var(--purple-border)", borderRadius: "10px", padding: "16px", marginBottom: "4px" }}>
+      {imoveis.length > 0 && (
+        <div style={{ marginBottom: "14px" }}>
+          <Field label={<>Imóvel administrado<InfoTip text="Escolha o imóvel para preencher automaticamente o proprietário e o percentual de comissão cadastrados. Você ainda pode ajustar os dois abaixo." /></>}>
+            <select value={imovelId} onChange={(e) => escolherImovel(e.target.value)} style={inp}>
+              <option value="">— não é locação de imóvel —</option>
+              {imoveis.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+        </div>
+      )}
+
+      <div style={grid2}>
+        <Field label={<>Quem recebe o valor bruto<InfoTip text="Dono do valor desta cobrança. Escolhendo um parceiro (ex.: proprietário do imóvel), o valor menos a comissão é repasse a ele — essa parte não é receita da empresa. Deixe 'A própria empresa' para uma receita normal." /></>}>
+          <select name="partner_id" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={inp}>
+            <option value="">A própria empresa (padrão)</option>
+            {(o.partners ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </Field>
+        <Field label={<>Nossa comissão (%)<InfoTip text="Percentual do valor que fica com a empresa. O restante é repasse ao parceiro. Vem preenchido do cadastro do imóvel, mas pode ser ajustado aqui." /></>}>
+          <input name="commission_percent" type="number" step="0.01" min="0" max="100"
+            value={pct} onChange={(e) => setPct(e.target.value)}
+            disabled={!partnerId} placeholder="10" style={{ ...inp, opacity: partnerId ? 1 : 0.5 }} />
+        </Field>
+      </div>
+
+      <div style={{ ...grid2, marginTop: "12px" }}>
+        <Field label={<>Juros / Multa (fica com a empresa)<InfoTip text="Juros e multa cobrados do cliente nesta parcela. Essa parte é receita da empresa e NÃO entra no repasse ao parceiro. Informe em R$ ou em % — no modo %, o percentual é aplicado sobre o Valor Total e convertido em R$ ao salvar." /></>}><InterestField color={color} /></Field>
+      </div>
+
+      {partnerId && base > 0 && (
+        <div style={{ marginTop: "14px", padding: "12px 14px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "8px" }}>
+          <div style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: "8px" }}>
+            Como fica a divisão (sobre o aluguel cadastrado de {brl(base)})
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "18px", fontSize: "12.5px" }}>
+            <span style={{ color: "var(--success)" }}>Comissão da empresa ({pctNum}%): <strong>{brl(comissao)}</strong></span>
+            <span style={{ color: "var(--purple)" }}>Repasse ao proprietário: <strong>{brl(repasse)}</strong></span>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: "9px", alignItems: "flex-start", marginTop: "14px", padding: "11px 13px", background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: "8px" }}>
+        <Info size={14} style={{ color: "var(--purple)", flexShrink: 0, marginTop: "2px" }} />
+        <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: 1.65 }}>
+          Com um parceiro selecionado, só a <strong>comissão</strong> e os <strong>juros/multa</strong> são receita da empresa. O restante é <strong>repasse</strong> ao parceiro — e vira uma conta a pagar automática quando a cobrança for recebida. Veja o total por parceiro no relatório <strong>Repasses por Parceiro</strong>.
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export type Options = {
   categories: Cat[]; accounts: Acc[]; costCenters: Opt[]; customers: Opt[]; suppliers: Opt[]; products: Prod[]
   /* Recebedor parceiro (repasse) — presentes só quando a função está ligada em Configurações */

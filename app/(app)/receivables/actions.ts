@@ -1,6 +1,7 @@
 "use server"
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { ensureRepasse } from "@/lib/repasse"
 
 type Result = { error: string | null }
 
@@ -104,7 +105,14 @@ export async function markReceived(id: string): Promise<Result> {
   const { error } = await supabase
     .from("receivables").update({ status: "recebido", received_at: today }).eq("id", id)
   if (error) return { error: error.message }
+
+  // Locação/parceiro: o que não é comissão da empresa vira conta a pagar do
+  // repasse ao proprietário (idempotente).
+  const rep = await ensureRepasse(supabase, id)
+  if (rep.error) return { error: rep.error }
+
   revalidatePath("/transactions")
+  revalidatePath("/payables")
   revalidate()
   return { error: null }
 }
