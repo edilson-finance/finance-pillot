@@ -436,11 +436,10 @@ type RepasseRow = {
 }
 
 function buildRepasses(data: ReportsData, f: Filters): BuiltReport {
-  const rows = data.receivables
-    .filter((r) => r.partnerId)
-    .filter((r) => (f.categoria === "todos" ? true : r.categoryId === f.categoria))
-    .filter((r) => (f.centroCusto === "todos" ? true : r.costCenterId === f.centroCusto))
-    .filter((r) => (f.status === "todos" ? true : r.status === f.status))
+  // Usa o mesmo filtro dos demais relatórios: aqui a convenção é que filtro
+  // VAZIO significa "todos" (não a string "todos").
+  const spec = REPORT_METAS.find((m) => m.id === "repasses")!.filters
+  const rows = filterOpen(data.receivables, f, spec).filter((r) => r.partnerId)
 
   const m = new Map<string, RepasseRow>()
   for (const r of rows) {
