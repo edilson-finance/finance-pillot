@@ -66,6 +66,7 @@ export default function ReceivablesClient({ receivables, customers, categories, 
   // Mobile: lista vira cards (ver bloco isMobile abaixo) em vez da tabela cortada.
   const { isMobile } = useMobileNav()
   const [filter, setFilter] = useState("todos")
+  const [partnerFilter, setPartnerFilter] = useState("todos")
   const [q, setQ] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [showNew, setShowNew] = useState(false)
@@ -85,6 +86,13 @@ export default function ReceivablesClient({ receivables, customers, categories, 
       return true
     })
     .filter(r => !q || (r.customer?.name ?? "").toLowerCase().includes(q.toLowerCase()))
+    // Filtro por recebedor: "quanto é do Zé Fernandes?" — inclui a opção
+    // "empresa" para ver só o que NÃO é repasse.
+    .filter(r => {
+      if (partnerFilter === "todos") return true
+      if (partnerFilter === "empresa") return !r.partner_id
+      return r.partner_id === partnerFilter
+    })
 
   const totals = {
     aReceber: receivables.filter(r => r.status !== "recebido" && !isReceivableOverdue(r.due_date, r.status)).reduce((s, r) => s + r.amount, 0),
@@ -232,6 +240,18 @@ export default function ReceivablesClient({ receivables, customers, categories, 
           <Search size={13} style={{ position:"absolute",left:"10px",top:"50%",transform:"translateY(-50%)",color:"var(--text-muted)" }}/>
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar cliente..." style={{ width:"100%",paddingLeft:"30px",paddingRight:"12px",paddingTop:"7px",paddingBottom:"7px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12px",color:"var(--text-primary)",outline:"none",fontFamily:"inherit" }}/>
         </div>
+        {/* Filtro por recebedor — "quanto desta lista é do proprietário X?" */}
+        {partnerReceiversEnabled && partners.length > 0 && (
+          <select
+            value={partnerFilter}
+            onChange={e => setPartnerFilter(e.target.value)}
+            aria-label="Filtrar por recebedor"
+            style={{ padding:"6px 10px",background:"var(--bg-tertiary)",border:"1px solid var(--border)",borderRadius:"6px",fontSize:"12px",color:"var(--text-primary)",fontFamily:"inherit",maxWidth:"210px" }}>
+            <option value="todos">Todos os recebedores</option>
+            <option value="empresa">Só da empresa (sem repasse)</option>
+            {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        )}
         {[["todos","Todos"],["a_receber","A Receber"],["em_atraso","Em Atraso"],["recebido","Recebidos"]].map(([k,l])=>(
           <button key={k} onClick={()=>setFilter(k)} style={{ padding:"5px 12px",borderRadius:"6px",border:"1px solid",borderColor:filter===k?"var(--accent)":"var(--border)",background:filter===k?"var(--accent-soft)":"transparent",color:filter===k?"var(--accent)":"var(--text-secondary)",fontSize:"12px",fontWeight:filter===k?700:400,cursor:"pointer",fontFamily:"inherit" }}>{l}</button>
         ))}

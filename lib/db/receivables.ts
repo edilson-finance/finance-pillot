@@ -13,6 +13,7 @@ export type Receivable = {
   category_id: string | null
   account_id: string | null
   partner_id: string | null
+  commission_amount: number
   customer: { name: string } | null
   category: { name: string } | null
   partner: { name: string } | null

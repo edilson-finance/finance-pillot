@@ -1,6 +1,7 @@
 "use server"
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { ensureRepasse } from "@/lib/repasse"
 
 type Result = { error: string | null }
 
@@ -176,6 +177,15 @@ export async function createReceita(fd: FormData): Promise<Result> {
     rows.push({ ...base, amount, due_date, status })
   }
 
+  // Locação/parceiro: a comissão (percentual que fica com a empresa) é calculada
+  // por parcela sobre o valor daquela linha. Sem parceiro, não há comissão.
+  const commissionPct = base.partner_id
+    ? Math.min(100, Math.max(0, num(fd, "commission_percent")))
+    : 0
+  for (const r of rows) {
+    r.commission_amount = commissionPct > 0 ? round2((Number(r.amount) * commissionPct) / 100) : 0
+  }
+
   const { data: inserted, error } = await supabase.from("receivables").insert(rows).select("id, status, amount, account_id, due_date")
   if (error) return { error: error.message }
   const recs = (inserted ?? []) as any[]
@@ -207,6 +217,12 @@ export async function createReceita(fd: FormData): Promise<Result> {
   if (recs.some((r) => r.status === "recebido")) {
     await supabase.from("receivables").update({ received_at: new Date().toISOString().slice(0, 10) })
       .in("id", recs.filter((r) => r.status === "recebido").map((r) => r.id))
+    // Locação/parceiro: cobrança que já nasce recebida também gera o repasse.
+    if (base.partner_id) {
+      for (const r of recs.filter((x) => x.status === "recebido")) {
+        await ensureRepasse(supabase, r.id)
+      }
+    }
   }
 
   if (parentId) {

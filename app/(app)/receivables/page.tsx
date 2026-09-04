@@ -32,7 +32,7 @@ export default async function ReceivablesPage() {
       accounts={accounts.map(a => ({ id: a.id, name: a.name, balance: a.opening_balance }))}
       costCenters={costCenters.map(c => ({ id: c.id, name: c.name }))}
       suppliers={suppliers.map(s => ({ id: s.id, name: s.name }))}
-      products={products.map(p => ({ id: p.id, name: p.name, price: p.price, unit: p.unit }))}
+      products={products.map(p => ({ id: p.id, name: p.name, price: p.price, unit: p.unit, partner_id: p.partner_id, tenant_id: p.tenant_id, commission_percent: p.commission_percent, rent_amount: p.rent_amount }))}
       partners={partners.filter(p => p.status === "ativo").map(p => ({ id: p.id, name: p.name }))}
       partnerReceiversEnabled={company?.partner_receivers_enabled ?? false}
     />

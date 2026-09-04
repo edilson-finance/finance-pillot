@@ -25,6 +25,11 @@ export interface OpenRow {
   costCenterName: string
   accountId: string | null
   accountName: string
+  /* Locação/repasse: quem recebe o valor bruto e quanto fica com a empresa. */
+  partnerId: string | null
+  partnerName: string
+  partnerPix: string
+  commission: number
 }
 
 // Linha de movimento realizado (transação de caixa).
@@ -95,6 +100,10 @@ function mapOpen(raw: any[], kind: "receivable" | "payable"): OpenRow[] {
     costCenterName: r.cost_center?.name ?? "Sem centro de custo",
     accountId: r.account_id ?? null,
     accountName: r.account?.name ?? "—",
+    partnerId: r.partner_id ?? null,
+    partnerName: r.partner?.name ?? "",
+    partnerPix: r.partner?.pix_key ?? "",
+    commission: N(r.commission_amount),
   }))
 }
 
@@ -127,7 +136,7 @@ export function useReportsData(range: DateRange): ReportsData {
     Promise.all([
       supabase
         .from("receivables")
-        .select("*, party:customers(name), category:categories(name), cost_center:cost_centers(name), account:accounts(name)")
+        .select("*, party:customers(name), category:categories(name), cost_center:cost_centers(name), account:accounts(name), partner:partners(name, pix_key)")
         .gte("due_date", start)
         .lte("due_date", end)
         .order("due_date"),

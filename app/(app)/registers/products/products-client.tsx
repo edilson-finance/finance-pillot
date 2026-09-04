@@ -16,7 +16,14 @@ function Label({ children, htmlFor }: { children:string; htmlFor?:string }) {
   return <label htmlFor={htmlFor} style={{ display:"block",fontSize:"11px",fontWeight:700,color:"var(--text-secondary)",marginBottom:"5px",textTransform:"uppercase",letterSpacing:"0.4px" }}>{children}</label>
 }
 
-export default function ProductsClient({ products }: { products: Product[] }) {
+type Opt = { id: string; name: string }
+
+export default function ProductsClient({ products, partners = [], customers = [], rentalEnabled = false }: {
+  products: Product[]
+  partners?: Opt[]
+  customers?: Opt[]
+  rentalEnabled?: boolean
+}) {
   const router = useRouter()
   const { confirm, alert } = useDialog()
   const [q, setQ] = useState("")
@@ -117,6 +124,68 @@ export default function ProductsClient({ products }: { products: Product[] }) {
             <div><Label htmlFor="price">Preço (R$)</Label><input name="price" id="price" type="number" step="0.01" min="0" defaultValue={editing?.price ?? 0} placeholder="0,00" style={inp}/></div>
             <div><Label htmlFor="unit">Unidade</Label><input name="unit" id="unit" type="text" defaultValue={editing?.unit ?? ""} placeholder="Un, Kg, Hora, m²..." style={inp}/></div>
           </div>
+
+          {/* ── Locação: só aparece quando a empresa administra imóveis de terceiros ── */}
+          {rentalEnabled && (
+            <div style={{ marginTop:"16px",paddingTop:"16px",borderTop:"1px solid var(--border)" }}>
+              <div style={{ fontSize:"11px",fontWeight:700,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:"10px" }}>
+                Locação (imóvel administrado)
+              </div>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px" }}>
+                <div>
+                  <Label htmlFor="partner_id">Proprietário (recebe o repasse)</Label>
+                  <select name="partner_id" id="partner_id" defaultValue={editing?.partner_id ?? ""} style={inp}>
+                    <option value="">— sem proprietário (imóvel próprio) —</option>
+                    {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="commission_percent">Nossa comissão (%)</Label>
+                  <input name="commission_percent" id="commission_percent" type="number" step="0.01" min="0" max="100"
+                    defaultValue={editing?.commission_percent ?? 10} placeholder="10" style={inp}/>
+                </div>
+                <div>
+                  <Label htmlFor="rent_amount">Valor do aluguel (R$)</Label>
+                  <input name="rent_amount" id="rent_amount" type="number" step="0.01" min="0"
+                    defaultValue={editing?.rent_amount ?? 0} placeholder="0,00" style={inp}/>
+                </div>
+                <div>
+                  <Label htmlFor="rental_status">Situação</Label>
+                  <select name="rental_status" id="rental_status" defaultValue={editing?.rental_status ?? "vago"} style={inp}>
+                    <option value="vago">Vago</option>
+                    <option value="alugado">Alugado</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn:"span 2" }}>
+                  <Label htmlFor="tenant_id">Inquilino</Label>
+                  <select name="tenant_id" id="tenant_id" defaultValue={editing?.tenant_id ?? ""} style={inp}>
+                    <option value="">— sem inquilino —</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="billing_day">Dia do boleto</Label>
+                  <input name="billing_day" id="billing_day" type="number" min="1" max="31"
+                    defaultValue={editing?.billing_day ?? ""} placeholder="Ex: 10" style={inp}/>
+                </div>
+                <div>
+                  <Label htmlFor="transfer_day">Dia do repasse</Label>
+                  <input name="transfer_day" id="transfer_day" type="number" min="1" max="31"
+                    defaultValue={editing?.transfer_day ?? ""} placeholder="Ex: 15" style={inp}/>
+                </div>
+                <div>
+                  <Label htmlFor="contract_end">Término do contrato</Label>
+                  <input name="contract_end" id="contract_end" type="date"
+                    defaultValue={editing?.contract_end ?? ""} style={inp}/>
+                </div>
+              </div>
+              <p style={{ fontSize:"11.5px",color:"var(--text-muted)",marginTop:"10px",lineHeight:1.5 }}>
+                Com proprietário e comissão definidos, ao lançar a cobrança deste imóvel o sistema calcula
+                sozinho quanto fica com a empresa e quanto é repasse — e gera a conta a pagar do repasse na baixa.
+              </p>
+            </div>
+          )}
+
           {error && <div style={{ marginTop:"12px",fontSize:"12px",color:"var(--danger)",fontWeight:600 }}>{error}</div>}
           <div style={{ display:"flex",gap:"8px",marginTop:"14px",paddingTop:"14px",borderTop:"1px solid var(--border)" }}>
             <button type="submit" disabled={saving} style={{ padding:"9px 20px",background:"var(--accent)",border:"none",borderRadius:"6px",fontSize:"12px",color:"#fff",fontWeight:700,cursor:saving?"default":"pointer",opacity:saving?0.7:1,fontFamily:"inherit" }}>{saving ? "Salvando..." : "Salvar item"}</button>
